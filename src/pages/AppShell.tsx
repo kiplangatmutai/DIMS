@@ -1,8 +1,15 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from '../components/shell/Sidebar';
 import { TopBar } from '../components/shell/TopBar';
+import { useRole } from '../context/RoleContext';
 export function AppShell() {
+  const { isAuthenticated } = useRole();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <div className="flex h-screen bg-neutral-50 overflow-hidden">
       <Sidebar />

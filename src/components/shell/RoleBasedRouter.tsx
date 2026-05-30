@@ -11,6 +11,8 @@ import { SubCountyInventory } from '../../pages/subcounty/SubCountyInventory';
 import { FacilityRequests } from '../../pages/subcounty/FacilityRequests';
 import { CountyRequestsQueue } from '../../pages/county/CountyRequestsQueue';
 import { DHACountyRequestsQueue } from '../../pages/dha/CountyRequestsQueue';
+import { UserManagement } from '../../pages/county/UserManagement';
+import { GlobalUsers } from '../../pages/admin/GlobalUsers';
 const ComingSoon = () =>
 <div className="flex flex-col items-center justify-center h-full py-20 text-neutral-500">
     <div className="text-6xl mb-4">🚧</div>
@@ -68,4 +70,18 @@ export function RequestsRouter() {
     default:
       return <ComingSoon />;
   }
+}
+
+export function UsersRouter() {
+  const { currentRole } = useRole();
+
+  if (currentRole.id === 'super-admin') {
+    return <GlobalUsers />;
+  }
+
+  if (currentRole.id === 'county-onboarding-officer') {
+    return <UserManagement />;
+  }
+
+  return <ComingSoon />;
 }

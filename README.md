@@ -23,6 +23,9 @@ Available endpoints:
 - `GET /api/health`
 - `POST /api/auth/login`
 - `GET /api/roles`
+- `GET /api/users`
+- `POST /api/users`
+- `PATCH /api/users/:id`
 - `GET /api/counties`
 - `GET /api/facilities`
 - `GET /api/device-types`

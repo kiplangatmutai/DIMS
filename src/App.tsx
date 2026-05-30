@@ -16,12 +16,10 @@ import { FacilityRequests } from './pages/subcounty/FacilityRequests';
 import { SubCountyInventory } from './pages/subcounty/SubCountyInventory';
 import { ProofOfDelivery } from './pages/county/ProofOfDelivery';
 import { AssetTransfers } from './pages/county/AssetTransfers';
-import { UserManagement } from './pages/county/UserManagement';
 import { Reports } from './pages/dha/Reports';
 import { BulkMigration } from './pages/dha/BulkMigration';
 import { OrderSummary } from './pages/vendor/OrderSummary';
 import { Serialization } from './pages/vendor/Serialization';
-import { GlobalUsers } from './pages/admin/GlobalUsers';
 import { Notifications } from './pages/Notifications';
 import { MaintenanceQueue } from './pages/county/MaintenanceQueue';
 import { Incidents } from './pages/dha/Incidents';
@@ -32,7 +30,8 @@ import { RequisitionDetail } from './pages/facility/RequisitionDetail';
 import {
   DashboardRouter,
   InventoryRouter,
-  RequestsRouter } from
+  RequestsRouter,
+  UsersRouter } from
 './components/shell/RoleBasedRouter';
 // Placeholder for unbuilt pages
 const ComingSoon = () =>
@@ -76,7 +75,7 @@ export function App() {
             {/* County Tier */}
             <Route path="/pod" element={<ProofOfDelivery />} />
             <Route path="/transfers" element={<AssetTransfers />} />
-            <Route path="/users" element={<UserManagement />} />
+            <Route path="/users" element={<UsersRouter />} />
 
             {/* DHA Tier */}
             <Route path="/reports" element={<Reports />} />
@@ -85,9 +84,6 @@ export function App() {
             {/* Vendor Tier */}
             <Route path="/orders" element={<OrderSummary />} />
             <Route path="/serialization" element={<Serialization />} />
-
-            {/* Admin Tier */}
-            <Route path="/users" element={<GlobalUsers />} />
 
             {/* Cross-cutting */}
             <Route path="/notifications" element={<Notifications />} />

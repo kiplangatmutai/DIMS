@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRole } from '../../context/RoleContext';
-import { ROLES } from '../../data/roles';
-import { Bell, Search, UserCircle, ChevronDown } from 'lucide-react';
+import { Bell, LogOut, Search, UserCircle } from 'lucide-react';
 
 export function TopBar() {
   const navigate = useNavigate();
-  const { currentRole, setCurrentRole } = useRole();
-  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const { currentRole, currentUser, logout } = useRole();
+  const displayName = currentUser?.name || currentUser?.username || 'Signed in user';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6 z-20 sticky top-0">
@@ -25,40 +29,6 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* Role Switcher (Demo Only) */}
-        <div className="relative">
-          <button
-            onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            className="flex items-center space-x-2 px-3 py-1.5 border border-accent-200 bg-accent-50 text-accent-700 rounded-md text-sm font-medium hover:bg-accent-100 transition-colors">
-            
-            <span>Demo: Switch Role</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-
-          {isRoleMenuOpen &&
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border border-neutral-200 py-1 max-h-96 overflow-y-auto z-50">
-              <div className="px-3 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider bg-neutral-50">
-                Select Role to Preview
-              </div>
-              {ROLES.map((role) =>
-            <button
-              key={role.id}
-              onClick={() => {
-                setCurrentRole(role);
-                setIsRoleMenuOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 ${currentRole.id === role.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-neutral-700'}`}>
-              
-                  <div className="font-medium">{role.name}</div>
-                  <div className="text-xs text-neutral-500">
-                    {role.tier} Tier
-                  </div>
-                </button>
-            )}
-            </div>
-          }
-        </div>
-
         <button
           onClick={() => navigate('/notifications')}
           className="relative p-2 text-neutral-400 hover:text-neutral-500 transition-colors">
@@ -70,10 +40,20 @@ export function TopBar() {
         <div className="flex items-center space-x-2 pl-4 border-l border-neutral-200">
           <UserCircle className="h-8 w-8 text-neutral-400" />
           <div className="hidden md:block">
-            <div className="text-sm font-medium text-neutral-700">Jane Doe</div>
+            <div className="text-sm font-medium text-neutral-700">
+              {displayName}
+            </div>
             <div className="text-xs text-neutral-500">{currentRole.name}</div>
           </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center px-3 py-2 text-sm font-medium text-neutral-600 hover:text-brand-700 hover:bg-brand-50 rounded-md transition-colors">
+          
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </button>
       </div>
     </header>);
 

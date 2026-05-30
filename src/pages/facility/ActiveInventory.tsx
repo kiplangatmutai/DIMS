@@ -88,6 +88,13 @@ export function ActiveInventory() {
                   </td>
                 </tr>
               )}
+              {MOCK_INVENTORY.length === 0 ?
+              <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-neutral-500">
+                    No inventory records yet.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

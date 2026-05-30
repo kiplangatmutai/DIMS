@@ -2,18 +2,7 @@ import React from 'react';
 import { Search, Filter, Download } from 'lucide-react';
 import { MOCK_INVENTORY, FACILITIES } from '../../data/mockData';
 export function SubCountyInventory() {
-  // Mock data expanded for Sub-County view
-  const inventory = [
-  ...MOCK_INVENTORY,
-  {
-    id: 'INV-005',
-    deviceType: 'Tablet',
-    imei: '354920108472999',
-    serial: null,
-    status: 'Device Accepted',
-    dateReceived: '2025-11-01',
-    facilityId: 'HF-10294'
-  }];
+  const inventory = MOCK_INVENTORY;
 
   const getFacilityName = (id: string) =>
   FACILITIES.find((f) => f.id === id)?.name || id;
@@ -49,8 +38,9 @@ export function SubCountyInventory() {
           <div className="flex space-x-3 w-full sm:w-auto">
             <select className="px-3 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium focus:outline-none focus:ring-1 focus:ring-brand-500">
               <option>All Facilities</option>
-              <option>Mbagathi County Hospital</option>
-              <option>Pumwani Maternity</option>
+              {FACILITIES.map((facility) =>
+              <option key={facility.id}>{facility.name}</option>
+              )}
             </select>
             <button className="flex items-center px-3 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors">
               <Filter className="w-4 h-4 mr-2" />
@@ -94,6 +84,13 @@ export function SubCountyInventory() {
                   </td>
                 </tr>
               )}
+              {inventory.length === 0 ?
+              <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-neutral-500">
+                    No inventory records yet.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

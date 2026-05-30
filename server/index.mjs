@@ -65,6 +65,55 @@ const enrichUser = (user) => ({
   facility: facilities.find((facility) => facility.id === user.facilityId) || null
 });
 
+const createUser = (body) => {
+  const requiredFields = ['name', 'username', 'email', 'password', 'roleId'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  if (users.some((user) => user.username.toLowerCase() === String(body.username).toLowerCase())) {
+    return {
+      error: 'Username is already in use.'
+    };
+  }
+
+  if (users.some((user) => user.email.toLowerCase() === String(body.email).toLowerCase())) {
+    return {
+      error: 'Email is already in use.'
+    };
+  }
+
+  if (!roles.some((role) => role.id === body.roleId)) {
+    return {
+      error: 'Selected role does not exist.'
+    };
+  }
+
+  if (body.facilityId && !facilities.some((facility) => facility.id === body.facilityId)) {
+    return {
+      error: 'Selected facility does not exist.'
+    };
+  }
+
+  const created = {
+    id: `USR-${String(users.length + 1).padStart(3, '0')}`,
+    name: String(body.name),
+    username: String(body.username),
+    email: String(body.email),
+    password: String(body.password),
+    roleId: String(body.roleId),
+    facilityId: body.facilityId || null,
+    status: 'Active'
+  };
+
+  users.push(created);
+  return { created };
+};
+
 const getDashboardSummary = () => {
   const totalDevices = inventory.length;
   const activeDevices = inventory.filter((item) => item.status === 'Device Accepted').length;
@@ -195,6 +244,39 @@ const handleRequest = async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/roles') {
       return sendJson(res, 200, { data: roles });
+    }
+
+    if (req.method === 'GET' && pathname === '/users') {
+      return sendJson(res, 200, { data: users.map(enrichUser) });
+    }
+
+    if (req.method === 'POST' && pathname === '/users') {
+      const result = createUser(await readBody(req));
+
+      if (result.error) {
+        return badRequest(res, result.error);
+      }
+
+      return sendJson(res, 201, { data: enrichUser(result.created) });
+    }
+
+    const userMatch = pathname.match(/^\/users\/([^/]+)$/);
+
+    if (userMatch && req.method === 'PATCH') {
+      const user = users.find((candidate) => candidate.id === userMatch[1]);
+
+      if (!user) {
+        return notFound(res);
+      }
+
+      const body = await readBody(req);
+
+      if (body.status && !['Active', 'Suspended', 'Disabled'].includes(body.status)) {
+        return badRequest(res, 'Unsupported user status.');
+      }
+
+      Object.assign(user, body);
+      return sendJson(res, 200, { data: enrichUser(user) });
     }
 
     if (req.method === 'GET' && pathname === '/counties') {

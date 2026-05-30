@@ -1,56 +1,6 @@
-export const counties = [
-  'Nairobi',
-  'Mombasa',
-  'Kisumu',
-  'Nakuru',
-  'Uasin Gishu',
-  'Kiambu',
-  'Machakos',
-  'Garissa',
-  'Kakamega',
-  'Nyeri',
-  'Meru',
-  'Kilifi'
-];
+export const counties = [];
 
-export const facilities = [
-  {
-    id: 'HF-10293',
-    name: 'Mbagathi County Hospital',
-    county: 'Nairobi',
-    subCounty: 'Langata'
-  },
-  {
-    id: 'HF-10294',
-    name: 'Pumwani Maternity Hospital',
-    county: 'Nairobi',
-    subCounty: 'Kamukunji'
-  },
-  {
-    id: 'HF-20192',
-    name: 'Coast General Teaching Hospital',
-    county: 'Mombasa',
-    subCounty: 'Mvita'
-  },
-  {
-    id: 'HF-30481',
-    name: 'Jaramogi Oginga Odinga Teaching',
-    county: 'Kisumu',
-    subCounty: 'Kisumu Central'
-  },
-  {
-    id: 'HF-40912',
-    name: 'Nakuru Level 5 Hospital',
-    county: 'Nakuru',
-    subCounty: 'Nakuru Town West'
-  },
-  {
-    id: 'HF-50123',
-    name: 'Moi Teaching and Referral',
-    county: 'Uasin Gishu',
-    subCounty: 'Turbo'
-  }
-];
+export const facilities = [];
 
 export const deviceTypes = ['Tablet', 'Desktop', 'Laptop', 'Biometric'];
 
@@ -73,15 +23,6 @@ export const roles = [
 export const users = [
   {
     id: 'USR-001',
-    name: 'Facility Officer',
-    username: 'facility',
-    email: 'facility@health.go.ke',
-    password: 'facility123',
-    roleId: 'facility-user',
-    facilityId: 'HF-10293'
-  },
-  {
-    id: 'USR-002',
     name: 'Super Admin',
     username: 'admin',
     email: 'admin@health.go.ke',
@@ -91,77 +32,6 @@ export const users = [
   }
 ];
 
-export const inventory = [
-  {
-    id: 'INV-001',
-    deviceType: 'Tablet',
-    imei: '354920108472910',
-    serial: null,
-    status: 'Device Accepted',
-    dateReceived: '2025-10-12',
-    facilityId: 'HF-10293'
-  },
-  {
-    id: 'INV-002',
-    deviceType: 'Desktop',
-    imei: null,
-    serial: 'SN-99201A',
-    status: 'Device Accepted',
-    dateReceived: '2025-10-12',
-    facilityId: 'HF-10293'
-  },
-  {
-    id: 'INV-003',
-    deviceType: 'Biometric',
-    imei: null,
-    serial: 'BIO-4492X',
-    status: 'Awaiting Support',
-    dateReceived: '2025-08-05',
-    facilityId: 'HF-10293'
-  },
-  {
-    id: 'INV-004',
-    deviceType: 'Laptop',
-    imei: null,
-    serial: 'LT-88219B',
-    status: 'Stolen',
-    dateReceived: '2025-01-20',
-    facilityId: 'HF-10293'
-  }
-];
+export const inventory = [];
 
-export const requisitions = [
-  {
-    id: 'REQ-2026-041',
-    sdpName: 'Comprehensive Care Center',
-    hrCount: 12,
-    deviceType: 'Tablet',
-    existingQty: 2,
-    requestedQty: 10,
-    status: 'Pending Sub-County',
-    facilityId: 'HF-10293',
-    timestamp: '2026-05-26T09:14:22.104Z'
-  },
-  {
-    id: 'REQ-2026-038',
-    sdpName: 'Maternity Wing',
-    hrCount: 8,
-    deviceType: 'Desktop',
-    existingQty: 1,
-    requestedQty: 3,
-    status: 'Approved',
-    facilityId: 'HF-10293',
-    timestamp: '2026-05-20T14:30:00.000Z'
-  },
-  {
-    id: 'REQ-2026-035',
-    sdpName: 'Outpatient Dept',
-    hrCount: 20,
-    deviceType: 'Biometric',
-    existingQty: 0,
-    requestedQty: 5,
-    status: 'Rejected',
-    facilityId: 'HF-10293',
-    timestamp: '2026-05-15T11:05:12.441Z'
-  }
-];
+export const requisitions = [];

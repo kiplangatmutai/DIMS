@@ -11,6 +11,11 @@ import { MOCK_INVENTORY, MOCK_REQUISITIONS } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function FacilityDashboard() {
   const navigate = useNavigate();
+  const activeDevices = MOCK_INVENTORY.filter((item) => item.status === 'Device Accepted').length;
+  const pendingRequests = MOCK_REQUISITIONS.filter((item) => item.status.startsWith('Pending')).length;
+  const openTickets = MOCK_INVENTORY.filter((item) => item.status === 'Awaiting Support').length;
+  const stolenIncidents = MOCK_INVENTORY.filter((item) => item.status === 'Stolen').length;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -19,7 +24,7 @@ export function FacilityDashboard() {
             Facility Dashboard
           </h1>
           <p className="text-neutral-500 mt-1">
-            Mbagathi County Hospital (HF-10293)
+            Facility operational overview.
           </p>
         </div>
         <button
@@ -38,7 +43,7 @@ export function FacilityDashboard() {
             <div className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Active Devices</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">142</div>
+          <div className="text-3xl font-bold text-neutral-900">{activeDevices}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -46,7 +51,7 @@ export function FacilityDashboard() {
             <ClipboardList className="w-5 h-5 mr-2 text-accent-500" />
             <span className="text-sm font-medium">Pending Requests</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">3</div>
+          <div className="text-3xl font-bold text-neutral-900">{pendingRequests}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -54,7 +59,7 @@ export function FacilityDashboard() {
             <Wrench className="w-5 h-5 mr-2 text-amber-500" />
             <span className="text-sm font-medium">Open Tickets</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">5</div>
+          <div className="text-3xl font-bold text-neutral-900">{openTickets}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -62,7 +67,7 @@ export function FacilityDashboard() {
             <ShieldAlert className="w-5 h-5 mr-2 text-brand-600" />
             <span className="text-sm font-medium">Stolen Incidents</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">1</div>
+          <div className="text-3xl font-bold text-neutral-900">{stolenIncidents}</div>
         </div>
       </div>
 
@@ -98,6 +103,11 @@ export function FacilityDashboard() {
                 </div>
               </div>
             )}
+            {MOCK_REQUISITIONS.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No requisitions recorded yet.
+              </div> :
+            null}
           </div>
         </div>
 

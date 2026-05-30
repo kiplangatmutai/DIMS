@@ -9,7 +9,7 @@ The schema targets PostgreSQL 14+.
 Files:
 
 - `schema.sql` creates tables, constraints, relationships, and indexes.
-- `seed.sql` inserts development data that matches the current mock API data.
+- `seed.sql` inserts only bootstrap reference data and the first super admin user.
 - `tables.mjs` exports table names and shared status values for Node.js code.
 
 ## Setup
@@ -42,6 +42,6 @@ DATABASE_URL=postgres://user:password@localhost:5432/dims
 Store only password hashes in `users.password_hash`. The placeholder seed values
 must be replaced with real hashes before production use.
 
-The current `server/index.mjs` still uses in-memory data. The next backend step
-is to add a PostgreSQL client such as `pg`, then replace array reads/writes with
-repository functions that query these tables.
+The current `server/index.mjs` still uses in-memory data for local development.
+The next backend step is to add a PostgreSQL client such as `pg`, then replace
+array reads/writes with repository functions that query these tables.

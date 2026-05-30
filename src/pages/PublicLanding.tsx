@@ -8,16 +8,14 @@ import {
   Users,
   Server } from
 'lucide-react';
-import { COUNTIES, DEVICE_TYPES } from '../data/mockData';
+import { DEVICE_TYPES } from '../data/mockData';
 import { Logo } from '../components/ui/Logo';
 export function PublicLanding() {
   const navigate = useNavigate();
   const [selectedDevice, setSelectedDevice] = useState('All');
   const [selectedCounty, setSelectedCounty] = useState<string | null>(null);
-  // Mock data for the map
   const getCountyColor = (county: string) => {
     if (selectedCounty === county) return 'fill-brand-500';
-    // Randomize some shades of blue based on string length for demo purposes
     const intensity = county.length % 3 + 1;
     return `fill-accent-${intensity}00 hover:fill-accent-400 cursor-pointer transition-colors`;
   };
@@ -87,7 +85,6 @@ export function PublicLanding() {
               viewBox="0 0 800 600"
               className="w-full h-full max-h-[600px] drop-shadow-md">
               
-              {/* This is a highly simplified abstract representation for demo purposes */}
               <g stroke="#ffffff" strokeWidth="2">
                 {/* Turkana / North Rift area */}
                 <path
@@ -217,7 +214,7 @@ export function PublicLanding() {
                         Total Devices
                       </div>
                       <div className="text-2xl font-bold text-neutral-900">
-                        {selectedDevice === 'All' ? '4,291' : '1,042'}
+                        0
                       </div>
                     </div>
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-100">
@@ -225,7 +222,7 @@ export function PublicLanding() {
                         Active Facilities
                       </div>
                       <div className="text-2xl font-bold text-neutral-900">
-                        142
+                        0
                       </div>
                     </div>
                   </div>
@@ -245,15 +242,11 @@ export function PublicLanding() {
                           </span>
                           <div className="flex items-center w-2/3">
                             <div className="h-2 bg-neutral-100 rounded-full w-full mr-3 overflow-hidden">
-                              <div
-                            className="h-full bg-accent-500 rounded-full"
-                            style={{
-                              width: `${Math.floor(Math.random() * 60) + 20}%`
-                            }} />
+                              <div className="h-full bg-accent-500 rounded-full w-0" />
                           
                             </div>
                             <span className="text-sm font-medium text-neutral-900 w-10 text-right">
-                              {Math.floor(Math.random() * 1000) + 100}
+                              0
                             </span>
                           </div>
                         </div>
@@ -267,7 +260,7 @@ export function PublicLanding() {
                         Operational Status
                       </span>
                       <span className="font-medium text-emerald-600">
-                        94.2% Online
+                        No records yet
                       </span>
                     </div>
                   </div>
@@ -292,24 +285,24 @@ export function PublicLanding() {
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="flex flex-col items-center text-center">
             <ActivitySquare className="w-8 h-8 text-brand-500 mb-3" />
-            <div className="text-3xl font-bold mb-1">124,592</div>
+            <div className="text-3xl font-bold mb-1">0</div>
             <div className="text-neutral-400 text-sm">
               Total Devices Tracked
             </div>
           </div>
           <div className="flex flex-col items-center text-center">
             <Users className="w-8 h-8 text-brand-500 mb-3" />
-            <div className="text-3xl font-bold mb-1">8,405</div>
+            <div className="text-3xl font-bold mb-1">0</div>
             <div className="text-neutral-400 text-sm">Active Facilities</div>
           </div>
           <div className="flex flex-col items-center text-center">
             <MapIcon className="w-8 h-8 text-brand-500 mb-3" />
-            <div className="text-3xl font-bold mb-1">47</div>
+            <div className="text-3xl font-bold mb-1">0</div>
             <div className="text-neutral-400 text-sm">Counties Served</div>
           </div>
           <div className="flex flex-col items-center text-center">
             <Server className="w-8 h-8 text-brand-500 mb-3" />
-            <div className="text-3xl font-bold mb-1">99.9%</div>
+            <div className="text-3xl font-bold mb-1">-</div>
             <div className="text-neutral-400 text-sm">System Uptime</div>
           </div>
         </div>

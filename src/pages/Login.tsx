@@ -3,24 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { api } from '../config/api';
-import { useRole } from '../context/RoleContext';
-import { ROLES } from '../data/roles';
+import { AuthUser, useRole } from '../context/RoleContext';
 
 interface LoginResponse {
   token: string;
-  user: {
-    id: string;
-    username?: string;
-    email: string;
-    role?: {
-      id: string;
-    };
-  };
+  user: AuthUser;
 }
 
 export function Login() {
   const navigate = useNavigate();
-  const { setCurrentRole } = useRole();
+  const { setSession } = useRole();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,15 +30,8 @@ export function Login() {
         username,
         password
       });
-      const role = ROLES.find((candidate) => candidate.id === response.user.role?.id);
 
-      localStorage.setItem('dims_token', response.token);
-      localStorage.setItem('dims_user', JSON.stringify(response.user));
-
-      if (role) {
-        setCurrentRole(role);
-      }
-
+      setSession(response.token, response.user);
       navigate('/dashboard');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');

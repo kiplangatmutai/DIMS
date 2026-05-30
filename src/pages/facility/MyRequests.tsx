@@ -82,14 +82,20 @@ export function MyRequests() {
                   </td>
                 </tr>
               )}
+              {MOCK_REQUISITIONS.length === 0 ?
+              <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-neutral-500">
+                    No requisitions recorded yet.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination (Mock) */}
         <div className="px-6 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
           <span className="text-sm text-neutral-500">
-            Showing 1 to 3 of 3 entries
+            Showing {MOCK_REQUISITIONS.length} entries
           </span>
           <div className="flex space-x-1">
             <button className="px-3 py-1 border border-neutral-300 rounded bg-white text-neutral-400 cursor-not-allowed text-sm">
