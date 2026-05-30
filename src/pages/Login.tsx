@@ -1,13 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
+import { api } from '../config/api';
+import { useRole } from '../context/RoleContext';
+import { ROLES } from '../data/roles';
+
+interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    username?: string;
+    email: string;
+    role?: {
+      id: string;
+    };
+  };
+}
+
 export function Login() {
   const navigate = useNavigate();
-  const handleLogin = (e: React.FormEvent) => {
+  const { setCurrentRole } = useRole();
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setError('');
+    setIsSubmitting(true);
+
+    const formData = new FormData(e.currentTarget);
+    const username = String(formData.get('username') || '');
+    const password = String(formData.get('password') || '');
+
+    try {
+      const response = await api.post<LoginResponse>('/auth/login', {
+        username,
+        password
+      });
+      const role = ROLES.find((candidate) => candidate.id === response.user.role?.id);
+
+      localStorage.setItem('dims_token', response.token);
+      localStorage.setItem('dims_user', JSON.stringify(response.user));
+
+      if (role) {
+        setCurrentRole(role);
+      }
+
+      navigate('/dashboard');
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Brand */}
@@ -49,19 +96,19 @@ export function Login() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-neutral-700">
                 
-                Email address
+                Username
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
                   required
-                  defaultValue="demo@health.go.ke"
+                  placeholder="admin"
                   className="appearance-none block w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm" />
                 
               </div>
@@ -81,11 +128,17 @@ export function Login() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  defaultValue="password123"
+                  placeholder="admin123"
                   className="appearance-none block w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm" />
                 
               </div>
             </div>
+
+            {error ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -116,31 +169,10 @@ export function Login() {
             <div>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
                 
-                Sign in
-              </button>
-            </div>
-
-            <div className="relative mt-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-neutral-500">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={handleLogin}
-                className="w-full flex justify-center py-2.5 px-4 border border-neutral-300 rounded-md shadow-sm text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
-                
-                <ShieldCheck className="w-5 h-5 mr-2 text-neutral-400" />
-                National Identity Provider (IdP)
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>

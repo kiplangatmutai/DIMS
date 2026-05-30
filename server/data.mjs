@@ -73,18 +73,20 @@ export const roles = [
 export const users = [
   {
     id: 'USR-001',
-    name: 'Demo User',
-    email: 'demo@health.go.ke',
-    password: 'password123',
+    name: 'Facility Officer',
+    username: 'facility',
+    email: 'facility@health.go.ke',
+    password: 'facility123',
     roleId: 'facility-user',
     facilityId: 'HF-10293'
   },
   {
     id: 'USR-002',
-    name: 'DHA Administrator',
+    name: 'Super Admin',
+    username: 'admin',
     email: 'admin@health.go.ke',
-    password: 'password123',
-    roleId: 'dha-admin',
+    password: 'admin123',
+    roleId: 'super-admin',
     facilityId: null
   }
 ];

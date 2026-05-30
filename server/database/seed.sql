@@ -82,9 +82,9 @@ INSERT INTO device_types (id, name, requires_imei, requires_serial) VALUES
   ('biometric', 'Biometric', false, true)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO users (id, full_name, email, password_hash, role_id, facility_id) VALUES
-  ('USR-001', 'Demo User', 'demo@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'facility-user', 'HF-10293'),
-  ('USR-002', 'DHA Administrator', 'admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'dha-admin', NULL)
+INSERT INTO users (id, full_name, username, email, password_hash, role_id, facility_id) VALUES
+  ('USR-001', 'Facility Officer', 'facility', 'facility@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'facility-user', 'HF-10293'),
+  ('USR-002', 'Super Admin', 'admin', 'admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'super-admin', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO devices (id, device_type_id, imei, serial, status, date_received, facility_id) VALUES

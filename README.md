@@ -35,10 +35,10 @@ Available endpoints:
 - `GET /api/requisitions/:id`
 - `PATCH /api/requisitions/:id`
 
-Demo credentials:
+Bootstrap super admin credentials:
 
-- Email: `demo@health.go.ke`
-- Password: `password123`
+- Username: `admin`
+- Password: `admin123`
 
 ## Database Schema
 

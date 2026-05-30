@@ -52,6 +52,7 @@ export const userStatuses = ['Active', 'Suspended', 'Disabled'];
 export const publicUserColumns = [
   'id',
   'full_name',
+  'username',
   'email',
   'role_id',
   'facility_id',

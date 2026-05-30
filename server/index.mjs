@@ -169,8 +169,13 @@ const handleRequest = async (req, res) => {
 
     if (req.method === 'POST' && pathname === '/auth/login') {
       const body = await readBody(req);
+      const identifier = String(body.username || body.email || '').trim().toLowerCase();
       const user = users.find(
-        (candidate) => candidate.email === body.email && candidate.password === body.password
+        (candidate) =>
+          [candidate.username, candidate.email]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase() === identifier) &&
+          candidate.password === body.password
       );
 
       if (!user) {

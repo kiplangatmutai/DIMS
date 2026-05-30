@@ -54,6 +54,7 @@ CREATE TABLE facilities (
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
   full_name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
