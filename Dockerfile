@@ -5,7 +5,9 @@ WORKDIR /app
 # Copy package files first so Docker can cache dependency installs.
 COPY package*.json ./
 
-RUN npm ci
+# Jenkins BOM generation installs some packages with legacy peer resolution
+# before the Docker build, so the image build must use the same mode.
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 
