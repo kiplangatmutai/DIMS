@@ -18,13 +18,13 @@ FROM 559104660845.dkr.ecr.eu-west-1.amazonaws.com/node:24-alpine-patched AS prod
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=3000
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.mjs ./server.mjs
 
 USER node
 
-EXPOSE 8080
+EXPOSE 3000
 
 CMD ["node", "server.mjs"]
