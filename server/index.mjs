@@ -5,6 +5,7 @@ import {
   deviceTypes,
   facilities,
   inventory,
+  modules,
   requisitions,
   roles,
   users
@@ -65,6 +66,86 @@ const enrichUser = (user) => ({
   facility: facilities.find((facility) => facility.id === user.facilityId) || null
 });
 
+const slugify = (value) =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const getAllowedOnboardingRoleIds = () => {
+  const customRoleIds = roles.filter((role) => role.isCustom).map((role) => role.id);
+  const mappedRoleIds = roles.flatMap((role) => role.canOnboardRoleIds || []);
+
+  return [...new Set([...mappedRoleIds, ...customRoleIds])];
+};
+
+const createRole = (body) => {
+  const requiredFields = ['name', 'tier', 'modulePaths'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  const validTiers = ['Facility', 'Sub-County', 'County', 'DHA', 'Vendor', 'Admin'];
+
+  if (!validTiers.includes(body.tier)) {
+    return {
+      error: 'Selected tier is not supported.'
+    };
+  }
+
+  if (!Array.isArray(body.modulePaths) || body.modulePaths.length === 0) {
+    return {
+      error: 'Select at least one module for this profile.'
+    };
+  }
+
+  const selectedRoutes = body.modulePaths.map((path) => modules.find((module) => module.path === path));
+
+  if (selectedRoutes.some((route) => !route)) {
+    return {
+      error: 'One or more selected modules do not exist.'
+    };
+  }
+
+  const id = slugify(body.id || body.name);
+
+  if (!id) {
+    return {
+      error: 'Profile name must contain letters or numbers.'
+    };
+  }
+
+  if (roles.some((role) => role.id === id)) {
+    return {
+      error: 'A profile with this name already exists.'
+    };
+  }
+
+  const created = {
+    id,
+    name: String(body.name),
+    tier: String(body.tier),
+    description: body.description || 'Custom access profile.',
+    routes: selectedRoutes,
+    canOnboardRoleIds: Array.isArray(body.canOnboardRoleIds) ? body.canOnboardRoleIds : [],
+    isCustom: true
+  };
+
+  roles.push(created);
+  const superAdmin = roles.find((role) => role.id === 'super-admin');
+
+  if (superAdmin && !superAdmin.canOnboardRoleIds.includes(created.id)) {
+    superAdmin.canOnboardRoleIds.push(created.id);
+  }
+
+  return { created };
+};
+
 const createUser = (body) => {
   const requiredFields = ['name', 'username', 'email', 'password', 'roleId'];
   const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
@@ -90,6 +171,12 @@ const createUser = (body) => {
   if (!roles.some((role) => role.id === body.roleId)) {
     return {
       error: 'Selected role does not exist.'
+    };
+  }
+
+  if (!getAllowedOnboardingRoleIds().includes(body.roleId)) {
+    return {
+      error: 'Users cannot be onboarded into this profile.'
     };
   }
 
@@ -244,6 +331,20 @@ const handleRequest = async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/roles') {
       return sendJson(res, 200, { data: roles });
+    }
+
+    if (req.method === 'POST' && pathname === '/roles') {
+      const result = createRole(await readBody(req));
+
+      if (result.error) {
+        return badRequest(res, result.error);
+      }
+
+      return sendJson(res, 201, { data: result.created });
+    }
+
+    if (req.method === 'GET' && pathname === '/modules') {
+      return sendJson(res, 200, { data: modules });
     }
 
     if (req.method === 'GET' && pathname === '/users') {

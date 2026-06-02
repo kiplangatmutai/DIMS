@@ -1,6 +1,7 @@
 export const tables = {
   roles: 'roles',
   roleRoutes: 'role_routes',
+  roleOnboardingPermissions: 'role_onboarding_permissions',
   counties: 'counties',
   subCounties: 'sub_counties',
   facilities: 'facilities',

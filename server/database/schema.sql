@@ -9,6 +9,8 @@ CREATE TABLE roles (
   tier TEXT NOT NULL CHECK (
     tier IN ('Public', 'Facility', 'Sub-County', 'County', 'DHA', 'Vendor', 'Admin')
   ),
+  description TEXT,
+  is_custom BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -22,6 +24,13 @@ CREATE TABLE role_routes (
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (role_id, path)
+);
+
+CREATE TABLE role_onboarding_permissions (
+  role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  can_onboard_role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (role_id, can_onboard_role_id)
 );
 
 CREATE TABLE counties (
@@ -295,6 +304,7 @@ CREATE TABLE audit_logs (
 );
 
 CREATE INDEX idx_role_routes_role_id ON role_routes(role_id);
+CREATE INDEX idx_role_onboarding_permissions_role_id ON role_onboarding_permissions(role_id);
 CREATE INDEX idx_sub_counties_county_id ON sub_counties(county_id);
 CREATE INDEX idx_facilities_county_id ON facilities(county_id);
 CREATE INDEX idx_facilities_sub_county_id ON facilities(sub_county_id);

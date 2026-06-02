@@ -1,5 +1,5 @@
 import React, { useState, createContext, useContext } from 'react';
-import { Role, ROLES } from '../data/roles';
+import { Role, ROLES, Tier } from '../data/roles';
 
 export interface AuthUser {
   id: string;
@@ -9,7 +9,11 @@ export interface AuthUser {
   role?: {
     id: string;
     name?: string;
-    tier?: string;
+    tier?: Tier;
+    description?: string;
+    routes?: Role['routes'];
+    canOnboardRoleIds?: string[];
+    isCustom?: boolean;
   };
   facility?: {
     id: string;
@@ -28,10 +32,27 @@ interface RoleContextType {
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
-const getRoleForUser = (user: AuthUser | null) =>
-  ROLES.find((role) => role.id === user?.role?.id) ||
-  ROLES.find((role) => role.id === 'super-admin') ||
-  ROLES[0];
+const getRoleForUser = (user: AuthUser | null) => {
+  const localRole = ROLES.find((role) => role.id === user?.role?.id);
+
+  if (localRole) {
+    return localRole;
+  }
+
+  if (user?.role?.id && user.role.name && user.role.tier && user.role.routes) {
+    return {
+      id: user.role.id,
+      name: user.role.name,
+      tier: user.role.tier,
+      description: user.role.description,
+      routes: user.role.routes,
+      canOnboardRoleIds: user.role.canOnboardRoleIds,
+      isCustom: user.role.isCustom
+    };
+  }
+
+  return ROLES.find((role) => role.id === 'super-admin') || ROLES[0];
+};
 
 export function RoleProvider({ children }: {children: React.ReactNode;}) {
   const [token, setToken] = useState<string | null>(() =>

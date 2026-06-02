@@ -23,6 +23,8 @@ Available endpoints:
 - `GET /api/health`
 - `POST /api/auth/login`
 - `GET /api/roles`
+- `POST /api/roles`
+- `GET /api/modules`
 - `GET /api/users`
 - `POST /api/users`
 - `PATCH /api/users/:id`
