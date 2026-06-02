@@ -1,4 +1,3 @@
-import React from 'react';
 import { useRole } from '../../context/RoleContext';
 import { FacilityDashboard } from '../../pages/facility/Dashboard';
 import { SubCountyDashboard } from '../../pages/subcounty/Dashboard';
@@ -11,6 +10,7 @@ import { SubCountyInventory } from '../../pages/subcounty/SubCountyInventory';
 import { FacilityRequests } from '../../pages/subcounty/FacilityRequests';
 import { CountyRequestsQueue } from '../../pages/county/CountyRequestsQueue';
 import { DHACountyRequestsQueue } from '../../pages/dha/CountyRequestsQueue';
+import { GlobalUsers } from '../../pages/admin/GlobalUsers';
 const ComingSoon = () =>
 <div className="flex flex-col items-center justify-center h-full py-20 text-neutral-500">
     <div className="text-6xl mb-4">🚧</div>
@@ -68,4 +68,14 @@ export function RequestsRouter() {
     default:
       return <ComingSoon />;
   }
+}
+
+export function UsersRouter() {
+  const { currentRole } = useRole();
+
+  if (currentRole.routes.some((route) => route.path === '/users')) {
+    return <GlobalUsers />;
+  }
+
+  return <ComingSoon />;
 }

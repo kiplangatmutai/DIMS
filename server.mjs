@@ -1,9 +1,21 @@
+import { randomUUID } from 'node:crypto';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  counties,
+  deviceTypes,
+  facilities,
+  inventory,
+  modules,
+  requisitions,
+  roles,
+  users
+} from './server/data.mjs';
 
 const port = Number(process.env.PORT || 3000);
+const basePath = '/dha-device-hub';
 const rootDir = fileURLToPath(new URL('./dist', import.meta.url));
 const indexFile = join(rootDir, 'index.html');
 
@@ -25,8 +37,514 @@ const contentTypes = {
   '.woff2': 'font/woff2'
 };
 
+function sendJson(response, statusCode, payload) {
+  response.writeHead(statusCode, {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Content-Type': 'application/json; charset=utf-8'
+  });
+
+  response.end(JSON.stringify(payload));
+}
+
+function notFound(response) {
+  return sendJson(response, 404, {
+    error: {
+      code: 'NOT_FOUND',
+      message: 'The requested API route does not exist.'
+    }
+  });
+}
+
+function badRequest(response, message) {
+  return sendJson(response, 400, {
+    error: {
+      code: 'BAD_REQUEST',
+      message
+    }
+  });
+}
+
+async function readBody(request) {
+  let raw = '';
+
+  for await (const chunk of request) {
+    raw += chunk;
+  }
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('Request body must be valid JSON.');
+  }
+}
+
+function stripPassword({ password, ...user }) {
+  return user;
+}
+
+function enrichUser(user) {
+  return {
+    ...stripPassword(user),
+    role: roles.find((role) => role.id === user.roleId) || null,
+    facility: facilities.find((facility) => facility.id === user.facilityId) || null
+  };
+}
+
+function slugify(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getAllowedOnboardingRoleIds() {
+  const customRoleIds = roles.filter((role) => role.isCustom).map((role) => role.id);
+  const mappedRoleIds = roles.flatMap((role) => role.canOnboardRoleIds || []);
+
+  return [...new Set([...mappedRoleIds, ...customRoleIds])];
+}
+
+function createRole(body) {
+  const requiredFields = ['name', 'tier', 'modulePaths'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  const validTiers = ['Facility', 'Sub-County', 'County', 'DHA', 'Vendor', 'Admin'];
+
+  if (!validTiers.includes(body.tier)) {
+    return {
+      error: 'Selected tier is not supported.'
+    };
+  }
+
+  if (!Array.isArray(body.modulePaths) || body.modulePaths.length === 0) {
+    return {
+      error: 'Select at least one module for this profile.'
+    };
+  }
+
+  const selectedRoutes = body.modulePaths.map((path) =>
+    modules.find((module) => module.path === path)
+  );
+
+  if (selectedRoutes.some((route) => !route)) {
+    return {
+      error: 'One or more selected modules do not exist.'
+    };
+  }
+
+  const id = slugify(body.id || body.name);
+
+  if (!id) {
+    return {
+      error: 'Profile name must contain letters or numbers.'
+    };
+  }
+
+  if (roles.some((role) => role.id === id)) {
+    return {
+      error: 'A profile with this name already exists.'
+    };
+  }
+
+  const created = {
+    id,
+    name: String(body.name),
+    tier: String(body.tier),
+    description: body.description || 'Custom access profile.',
+    routes: selectedRoutes,
+    canOnboardRoleIds: Array.isArray(body.canOnboardRoleIds) ? body.canOnboardRoleIds : [],
+    isCustom: true
+  };
+
+  roles.push(created);
+
+  const superAdmin = roles.find((role) => role.id === 'super-admin');
+
+  if (superAdmin && !superAdmin.canOnboardRoleIds.includes(created.id)) {
+    superAdmin.canOnboardRoleIds.push(created.id);
+  }
+
+  return { created };
+}
+
+function createUser(body) {
+  const requiredFields = ['name', 'username', 'email', 'password', 'roleId'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  if (users.some((user) => user.username.toLowerCase() === String(body.username).toLowerCase())) {
+    return {
+      error: 'Username is already in use.'
+    };
+  }
+
+  if (users.some((user) => user.email.toLowerCase() === String(body.email).toLowerCase())) {
+    return {
+      error: 'Email is already in use.'
+    };
+  }
+
+  if (!roles.some((role) => role.id === body.roleId)) {
+    return {
+      error: 'Selected role does not exist.'
+    };
+  }
+
+  if (!getAllowedOnboardingRoleIds().includes(body.roleId)) {
+    return {
+      error: 'Users cannot be onboarded into this profile.'
+    };
+  }
+
+  if (body.facilityId && !facilities.some((facility) => facility.id === body.facilityId)) {
+    return {
+      error: 'Selected facility does not exist.'
+    };
+  }
+
+  const created = {
+    id: `USR-${String(users.length + 1).padStart(3, '0')}`,
+    name: String(body.name),
+    username: String(body.username),
+    email: String(body.email),
+    password: String(body.password),
+    roleId: String(body.roleId),
+    facilityId: body.facilityId || null,
+    status: 'Active'
+  };
+
+  users.push(created);
+
+  return { created };
+}
+
+function getDashboardSummary() {
+  const totalDevices = inventory.length;
+  const activeDevices = inventory.filter((item) => item.status === 'Device Accepted').length;
+  const maintenanceDevices = inventory.filter((item) => item.status === 'Awaiting Support').length;
+  const stolenDevices = inventory.filter((item) => item.status === 'Stolen').length;
+  const pendingRequests = requisitions.filter((item) => item.status.startsWith('Pending')).length;
+  const approvedRequests = requisitions.filter((item) => item.status === 'Approved').length;
+
+  return {
+    totalDevices,
+    activeDevices,
+    maintenanceDevices,
+    stolenDevices,
+    pendingRequests,
+    approvedRequests,
+    totalFacilities: facilities.length,
+    totalCounties: counties.length
+  };
+}
+
+function createRequisition(body) {
+  const requiredFields = ['sdpName', 'hrCount', 'deviceType', 'existingQty', 'requestedQty'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  const created = {
+    id: `REQ-${new Date().getUTCFullYear()}-${String(requisitions.length + 1).padStart(3, '0')}`,
+    sdpName: String(body.sdpName),
+    hrCount: Number(body.hrCount),
+    deviceType: String(body.deviceType),
+    existingQty: Number(body.existingQty),
+    requestedQty: Number(body.requestedQty),
+    status: 'Pending Sub-County',
+    facilityId: body.facilityId || 'HF-10293',
+    timestamp: new Date().toISOString()
+  };
+
+  requisitions.unshift(created);
+
+  return { created };
+}
+
+function createInventoryItem(body) {
+  if (!body.deviceType || !body.facilityId) {
+    return {
+      error: 'deviceType and facilityId are required.'
+    };
+  }
+
+  const created = {
+    id: `INV-${String(inventory.length + 1).padStart(3, '0')}`,
+    deviceType: String(body.deviceType),
+    imei: body.imei || null,
+    serial: body.serial || null,
+    status: body.status || 'Device Accepted',
+    dateReceived: body.dateReceived || new Date().toISOString().slice(0, 10),
+    facilityId: String(body.facilityId)
+  };
+
+  inventory.unshift(created);
+
+  return { created };
+}
+
+function parseApiUrl(request) {
+  const url = new URL(request.url || '/', `http://${request.headers.host || `127.0.0.1:${port}`}`);
+  const pathname = url.pathname.startsWith(`${basePath}/api`)
+    ? url.pathname.replace(basePath, '')
+    : url.pathname;
+
+  if (!pathname.startsWith('/api')) {
+    return null;
+  }
+
+  return {
+    pathname: pathname.replace(/^\/api/, '') || '/',
+    searchParams: url.searchParams
+  };
+}
+
+async function handleApiRequest(request, response) {
+  if (request.method === 'OPTIONS') {
+    return sendJson(response, 204, {});
+  }
+
+  const apiUrl = parseApiUrl(request);
+
+  if (!apiUrl) {
+    return false;
+  }
+
+  const { pathname, searchParams } = apiUrl;
+
+  try {
+    if (request.method === 'GET' && pathname === '/health') {
+      return sendJson(response, 200, {
+        status: 'ok',
+        service: 'DHA Device Hub API',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (request.method === 'POST' && pathname === '/auth/login') {
+      const body = await readBody(request);
+      const identifier = String(body.username || body.email || '').trim().toLowerCase();
+      const user = users.find(
+        (candidate) =>
+          [candidate.username, candidate.email]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase() === identifier) &&
+          candidate.password === body.password
+      );
+
+      if (!user) {
+        return sendJson(response, 401, {
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'Email or password is incorrect.'
+          }
+        });
+      }
+
+      return sendJson(response, 200, {
+        token: randomUUID(),
+        user: enrichUser(user)
+      });
+    }
+
+    if (request.method === 'GET' && pathname === '/roles') {
+      return sendJson(response, 200, { data: roles });
+    }
+
+    if (request.method === 'POST' && pathname === '/roles') {
+      const result = createRole(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    if (request.method === 'GET' && pathname === '/modules') {
+      return sendJson(response, 200, { data: modules });
+    }
+
+    if (request.method === 'GET' && pathname === '/users') {
+      return sendJson(response, 200, { data: users.map(enrichUser) });
+    }
+
+    if (request.method === 'POST' && pathname === '/users') {
+      const result = createUser(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: enrichUser(result.created) });
+    }
+
+    const userMatch = pathname.match(/^\/users\/([^/]+)$/);
+
+    if (userMatch && request.method === 'PATCH') {
+      const user = users.find((candidate) => candidate.id === userMatch[1]);
+
+      if (!user) {
+        return notFound(response);
+      }
+
+      const body = await readBody(request);
+
+      if (body.status && !['Active', 'Suspended', 'Disabled'].includes(body.status)) {
+        return badRequest(response, 'Unsupported user status.');
+      }
+
+      Object.assign(user, body);
+      return sendJson(response, 200, { data: enrichUser(user) });
+    }
+
+    if (request.method === 'GET' && pathname === '/counties') {
+      return sendJson(response, 200, { data: counties });
+    }
+
+    if (request.method === 'GET' && pathname === '/facilities') {
+      const county = searchParams.get('county');
+      const data = county
+        ? facilities.filter((facility) => facility.county.toLowerCase() === county.toLowerCase())
+        : facilities;
+
+      return sendJson(response, 200, { data });
+    }
+
+    if (request.method === 'GET' && pathname === '/device-types') {
+      return sendJson(response, 200, { data: deviceTypes });
+    }
+
+    if (request.method === 'GET' && pathname === '/dashboard/summary') {
+      return sendJson(response, 200, { data: getDashboardSummary() });
+    }
+
+    if (request.method === 'GET' && pathname === '/inventory') {
+      const facilityId = searchParams.get('facilityId');
+      const status = searchParams.get('status');
+      let data = inventory;
+
+      if (facilityId) {
+        data = data.filter((item) => item.facilityId === facilityId);
+      }
+
+      if (status) {
+        data = data.filter((item) => item.status.toLowerCase() === status.toLowerCase());
+      }
+
+      return sendJson(response, 200, { data });
+    }
+
+    if (request.method === 'POST' && pathname === '/inventory') {
+      const result = createInventoryItem(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    const inventoryMatch = pathname.match(/^\/inventory\/([^/]+)$/);
+
+    if (inventoryMatch && request.method === 'PATCH') {
+      const item = inventory.find((candidate) => candidate.id === inventoryMatch[1]);
+
+      if (!item) {
+        return notFound(response);
+      }
+
+      Object.assign(item, await readBody(request));
+      return sendJson(response, 200, { data: item });
+    }
+
+    if (request.method === 'GET' && pathname === '/requisitions') {
+      const status = searchParams.get('status');
+      const facilityId = searchParams.get('facilityId');
+      let data = requisitions;
+
+      if (status) {
+        data = data.filter((item) => item.status.toLowerCase() === status.toLowerCase());
+      }
+
+      if (facilityId) {
+        data = data.filter((item) => item.facilityId === facilityId);
+      }
+
+      return sendJson(response, 200, { data });
+    }
+
+    if (request.method === 'POST' && pathname === '/requisitions') {
+      const result = createRequisition(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    const requisitionMatch = pathname.match(/^\/requisitions\/([^/]+)$/);
+
+    if (requisitionMatch && request.method === 'GET') {
+      const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
+
+      if (!requisition) {
+        return notFound(response);
+      }
+
+      return sendJson(response, 200, { data: requisition });
+    }
+
+    if (requisitionMatch && request.method === 'PATCH') {
+      const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
+
+      if (!requisition) {
+        return notFound(response);
+      }
+
+      Object.assign(requisition, await readBody(request));
+      return sendJson(response, 200, { data: requisition });
+    }
+
+    return notFound(response);
+  } catch (error) {
+    return sendJson(response, 500, {
+      error: {
+        code: 'SERVER_ERROR',
+        message: error.message || 'Unexpected API error.'
+      }
+    });
+  }
+}
+
 function resolveFilePath(urlPath) {
-  const decodedPath = decodeURIComponent(urlPath.split('?')[0] || '/');
+  const rawPath = decodeURIComponent(urlPath.split('?')[0] || '/');
+  const decodedPath = rawPath.startsWith(basePath)
+    ? rawPath.slice(basePath.length) || '/'
+    : rawPath;
   const requestedPath = normalize(decodedPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = join(rootDir, requestedPath);
 
@@ -37,7 +555,12 @@ function resolveFilePath(urlPath) {
   return indexFile;
 }
 
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
+  if (parseApiUrl(request)) {
+    await handleApiRequest(request, response);
+    return;
+  }
+
   if (!existsSync(indexFile)) {
     response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Application build output was not found.');

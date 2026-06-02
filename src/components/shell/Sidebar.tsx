@@ -1,4 +1,3 @@
-import React, { Component } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useRole } from '../../context/RoleContext';
 import * as Icons from 'lucide-react';
@@ -21,7 +20,7 @@ export function Sidebar() {
 
       <div className="px-6 py-4 border-b border-brand-700">
         <div className="text-xs text-brand-200 uppercase tracking-wider font-semibold mb-1">
-          Current Role
+          Signed in as
         </div>
         <div className="font-medium truncate" title={currentRole.name}>
           {currentRole.name}

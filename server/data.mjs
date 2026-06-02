@@ -1,29 +1,10 @@
-export type Tier =
-'Public' |
-'Facility' |
-'Sub-County' |
-'County' |
-'DHA' |
-'Vendor' |
-'Admin';
+export const counties = [];
 
-export interface RouteDef {
-  path: string;
-  label: string;
-  icon: string;
-}
+export const facilities = [];
 
-export interface Role {
-  id: string;
-  name: string;
-  tier: Tier;
-  description?: string;
-  routes: RouteDef[];
-  canOnboardRoleIds?: string[];
-  isCustom?: boolean;
-}
+export const deviceTypes = ['Tablet', 'Desktop', 'Laptop', 'Biometric'];
 
-export const MODULES: RouteDef[] = [
+export const modules = [
   { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
   { path: '/users', label: 'User Onboarding', icon: 'Users' },
   { path: '/roles', label: 'Profile Management', icon: 'Shield' },
@@ -46,26 +27,18 @@ export const MODULES: RouteDef[] = [
   { path: '/handover', label: 'S11/S13 Handover', icon: 'FileCheck' }
 ];
 
-const moduleByPath = new Map(MODULES.map((module) => [module.path, module]));
+const moduleByPath = new Map(modules.map((module) => [module.path, module]));
 
-export const routesFor = (paths: string[]) =>
-  paths.map((path) => moduleByPath.get(path)).filter(Boolean) as RouteDef[];
+const routesFor = (paths) => paths.map((path) => moduleByPath.get(path)).filter(Boolean);
 
-export const SUPER_ADMIN_ONBOARDING_ROLE_IDS = [
-  'dha-admin',
-  'county-onboarding-officer',
-  'admin',
-  'vendor-admin'
-];
-
-export const ROLES: Role[] = [
+export const roles = [
   {
     id: 'super-admin',
     name: 'Super Admin',
     tier: 'Admin',
     description: 'Root administrator that onboards top-level administrators and creates custom profiles.',
     routes: routesFor(['/dashboard', '/users', '/roles']),
-    canOnboardRoleIds: SUPER_ADMIN_ONBOARDING_ROLE_IDS
+    canOnboardRoleIds: ['dha-admin', 'county-onboarding-officer', 'admin', 'vendor-admin']
   },
   {
     id: 'admin',
@@ -122,11 +95,7 @@ export const ROLES: Role[] = [
     tier: 'DHA',
     description: 'Provisions internal DHA operational roles and executes verified bulk legacy data migrations.',
     routes: routesFor(['/dashboard', '/users', '/migration', '/roles']),
-    canOnboardRoleIds: [
-      'dha-onboarding-officer',
-      'dha-approval-officer',
-      'dha-inventory-officer'
-    ]
+    canOnboardRoleIds: ['dha-onboarding-officer', 'dha-approval-officer', 'dha-inventory-officer']
   },
   {
     id: 'dha-onboarding-officer',
@@ -214,3 +183,20 @@ export const ROLES: Role[] = [
     ])
   }
 ];
+
+export const users = [
+  {
+    id: 'USR-001',
+    name: 'Super Admin',
+    username: 'admin',
+    email: 'admin@health.go.ke',
+    password: 'admin123',
+    roleId: 'super-admin',
+    facilityId: null,
+    status: 'Active'
+  }
+];
+
+export const inventory = [];
+
+export const requisitions = [];

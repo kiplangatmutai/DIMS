@@ -1,28 +1,105 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import { Role, ROLES } from '../data/roles';
+import React, { useState, createContext, useContext } from 'react';
+import { Role, ROLES, Tier } from '../data/roles';
+
+export interface AuthUser {
+  id: string;
+  name?: string;
+  username?: string;
+  email: string;
+  role?: {
+    id: string;
+    name?: string;
+    tier?: Tier;
+    description?: string;
+    routes?: Role['routes'];
+    canOnboardRoleIds?: string[];
+    isCustom?: boolean;
+  };
+  facility?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface RoleContextType {
   currentRole: Role;
-  setCurrentRole: (role: Role) => void;
+  currentUser: AuthUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  setSession: (token: string, user: AuthUser) => void;
+  logout: () => void;
 }
+
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
+
+const getRoleForUser = (user: AuthUser | null) => {
+  const localRole = ROLES.find((role) => role.id === user?.role?.id);
+
+  if (localRole) {
+    return localRole;
+  }
+
+  if (user?.role?.id && user.role.name && user.role.tier && user.role.routes) {
+    return {
+      id: user.role.id,
+      name: user.role.name,
+      tier: user.role.tier,
+      description: user.role.description,
+      routes: user.role.routes,
+      canOnboardRoleIds: user.role.canOnboardRoleIds,
+      isCustom: user.role.isCustom
+    };
+  }
+
+  return ROLES.find((role) => role.id === 'super-admin') || ROLES[0];
+};
+
 export function RoleProvider({ children }: {children: React.ReactNode;}) {
-  const [currentRole, setCurrentRoleState] = useState<Role>(() => {
-    const saved = localStorage.getItem('dims_role');
-    if (saved) {
-      const found = ROLES.find((r) => r.id === saved);
-      if (found) return found;
+  const [token, setToken] = useState<string | null>(() =>
+  localStorage.getItem('dims_token')
+  );
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const saved = localStorage.getItem('dims_user');
+
+    if (!saved) {
+      return null;
     }
-    return ROLES[0];
+
+    try {
+      return JSON.parse(saved) as AuthUser;
+    } catch {
+      localStorage.removeItem('dims_user');
+      return null;
+    }
   });
-  const setCurrentRole = (role: Role) => {
-    setCurrentRoleState(role);
-    localStorage.setItem('dims_role', role.id);
+
+  const currentRole = getRoleForUser(currentUser);
+
+  const setSession = (nextToken: string, user: AuthUser) => {
+    setToken(nextToken);
+    setCurrentUser(user);
+    localStorage.setItem('dims_token', nextToken);
+    localStorage.setItem('dims_user', JSON.stringify(user));
+    localStorage.removeItem('dims_role');
   };
+
+  const logout = () => {
+    setToken(null);
+    setCurrentUser(null);
+    localStorage.removeItem('dims_token');
+    localStorage.removeItem('dims_user');
+    localStorage.removeItem('dims_role');
+  };
+
   return (
     <RoleContext.Provider
       value={{
         currentRole,
-        setCurrentRole
+        currentUser,
+        token,
+        isAuthenticated: Boolean(token && currentUser),
+        setSession,
+        logout
       }}>
       
       {children}

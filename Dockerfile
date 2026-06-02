@@ -22,6 +22,7 @@ ENV PORT=3000
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.mjs ./server.mjs
+COPY --from=build /app/server ./server
 
 USER node
 
