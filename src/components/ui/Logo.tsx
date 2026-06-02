@@ -1,5 +1,5 @@
 import React from 'react';
-const LOGO_URL = "/DHA-LOGO-FA-02.png";
+const LOGO_URL = `${import.meta.env.BASE_URL}DHA-LOGO-FA-02.png`;
 
 interface LogoProps {
   variant?: 'default' | 'light' | 'icon';

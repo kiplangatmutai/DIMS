@@ -49,7 +49,7 @@ const ComingSoon = () =>
 export function App() {
   return (
     <RoleProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/dha-device-hub">
         <Routes>
           <Route path="/" element={<PublicLanding />} />
           <Route path="/login" element={<Login />} />
