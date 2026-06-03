@@ -3,6 +3,7 @@ import { Search, Filter, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface Requisition {
   id: string;
@@ -19,13 +20,20 @@ interface DataResponse<T> {
 
 export function MyRequests() {
   const navigate = useNavigate();
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
 
   useEffect(() => {
-    api.get<DataResponse<Requisition[]>>('/requisitions')
+    if (!facilityId) {
+      setRequisitions([]);
+      return;
+    }
+
+    api.get<DataResponse<Requisition[]>>(`/requisitions?facilityId=${encodeURIComponent(facilityId)}`)
       .then((response) => setRequisitions(response.data))
       .catch(() => setRequisitions([]));
-  }, []);
+  }, [facilityId]);
 
   return (
     <div className="space-y-6">

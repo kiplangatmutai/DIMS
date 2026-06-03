@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Boxes,
   ClipboardList,
   Wrench,
   ShieldAlert,
@@ -9,6 +10,7 @@ import {
 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface DataResponse<T> {
   data: T;
@@ -40,6 +42,8 @@ interface InventoryItem {
 
 export function FacilityDashboard() {
   const navigate = useNavigate();
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [summary, setSummary] = useState<Summary>({
     activeDevices: 0,
     pendingRequests: 0,
@@ -50,10 +54,24 @@ export function FacilityDashboard() {
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
+    if (!facilityId) {
+      setSummary({
+        activeDevices: 0,
+        pendingRequests: 0,
+        openTickets: 0,
+        stolenIncidents: 0
+      });
+      setRequisitions([]);
+      setInventoryAlerts([]);
+      return;
+    }
+
+    const facilityQuery = `?facilityId=${encodeURIComponent(facilityId)}`;
+
     Promise.all([
-      api.get<DataResponse<Summary>>('/dashboard/summary'),
-      api.get<DataResponse<Requisition[]>>('/requisitions'),
-      api.get<DataResponse<InventoryItem[]>>('/inventory')
+      api.get<DataResponse<Summary>>(`/dashboard/summary${facilityQuery}`),
+      api.get<DataResponse<Requisition[]>>(`/requisitions${facilityQuery}`),
+      api.get<DataResponse<InventoryItem[]>>(`/inventory${facilityQuery}`)
     ]).then(([summaryResponse, requisitionsResponse, inventoryResponse]) => {
       setSummary(summaryResponse.data);
       setRequisitions(requisitionsResponse.data.slice(0, 5));
@@ -68,7 +86,7 @@ export function FacilityDashboard() {
         stolenIncidents: 0
       });
     });
-  }, []);
+  }, [facilityId]);
 
   return (
     <div className="space-y-6">
@@ -92,37 +110,45 @@ export function FacilityDashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+        <button
+          onClick={() => navigate('/inventory')}
+          className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col text-left hover:border-brand-300 hover:shadow-md transition">
           <div className="flex items-center text-neutral-500 mb-2">
-            <div className="w-5 h-5 mr-2 text-brand-500" />
+            <Boxes className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Active Devices</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">{summary.activeDevices}</div>
-        </div>
+        </button>
 
-        <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+        <button
+          onClick={() => navigate('/requisitions')}
+          className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col text-left hover:border-brand-300 hover:shadow-md transition">
           <div className="flex items-center text-neutral-500 mb-2">
             <ClipboardList className="w-5 h-5 mr-2 text-accent-500" />
             <span className="text-sm font-medium">Pending Requests</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">{summary.pendingRequests}</div>
-        </div>
+        </button>
 
-        <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+        <button
+          onClick={() => navigate('/faulty')}
+          className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col text-left hover:border-brand-300 hover:shadow-md transition">
           <div className="flex items-center text-neutral-500 mb-2">
-            <Wrench className="w-5 h-5 mr-2 text-amber-500" />
+            <Wrench className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Open Tickets</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">{summary.openTickets}</div>
-        </div>
+        </button>
 
-        <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+        <button
+          onClick={() => navigate('/stolen')}
+          className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col text-left hover:border-brand-300 hover:shadow-md transition">
           <div className="flex items-center text-neutral-500 mb-2">
             <ShieldAlert className="w-5 h-5 mr-2 text-brand-600" />
             <span className="text-sm font-medium">Stolen Incidents</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">{summary.stolenIncidents}</div>
-        </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

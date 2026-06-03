@@ -34,7 +34,7 @@ export function Notifications() {
               <AlertCircle className="w-5 h-5 text-brand-600" />
               }
                 {notif.type === 'success' &&
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <CheckCircle2 className="w-5 h-5 text-brand-500" />
               }
               </div>
               <div className="flex-1">

@@ -344,12 +344,12 @@ export function BulkMigration() {
 
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                    <div className="flex items-center text-emerald-700 mb-1">
+                  <div className="bg-white border border-brand-200 rounded-lg p-4">
+                    <div className="flex items-center text-black mb-1">
                       <CheckCircle2 className="w-4 h-4 mr-1" />
                       <span className="font-medium">Valid Rows</span>
                     </div>
-                    <div className="text-2xl font-bold text-emerald-800">
+                    <div className="text-2xl font-bold text-black">
                       {validRows.length}
                     </div>
                   </div>
@@ -365,7 +365,7 @@ export function BulkMigration() {
                 </div>
 
                 {message ?
-                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <div className="rounded-md border border-brand-200 bg-white px-4 py-3 text-sm text-black">
                     {message}
                   </div> :
                 null}

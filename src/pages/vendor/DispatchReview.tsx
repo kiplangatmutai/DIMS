@@ -21,13 +21,13 @@ export function DispatchReview() {
       </div>
 
       {showSuccessBanner &&
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 mr-3 flex-shrink-0 mt-0.5" />
+      <div className="bg-white border border-brand-200 rounded-lg p-4 flex items-start">
+          <CheckCircle2 className="w-5 h-5 text-brand-600 mr-3 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <div className="font-medium text-emerald-900">
+            <div className="font-medium text-black">
               Dispatch Approved Successfully
             </div>
-            <div className="text-sm text-emerald-700 mt-1">
+            <div className="text-sm text-black mt-1">
               Webhook notification sent to DHA. SMS alerts dispatched to County
               Request Approver. Order status updated to 'Dispatched'.
             </div>

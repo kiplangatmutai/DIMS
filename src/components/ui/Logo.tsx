@@ -8,7 +8,7 @@ interface LogoProps {
 /**
  * DHA brand logo.
  * - default: full color logo on light surfaces
- * - light:   for use on dark/red backgrounds — wraps the logo in a white pill so the
+ * - light:   for use on dark/blue backgrounds — wraps the logo in a white pill so the
  *            black wordmark remains legible
  * - icon:    just the logo image, slightly smaller — for sidebar / compact spots
  */

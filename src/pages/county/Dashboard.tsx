@@ -24,7 +24,7 @@ export function CountyDashboard() {
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
           <div className="flex items-center text-neutral-500 mb-2">
-            <Boxes className="w-5 h-5 mr-2 text-emerald-500" />
+            <Boxes className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Total Inventory</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">0</div>
@@ -32,7 +32,7 @@ export function CountyDashboard() {
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
           <div className="flex items-center text-neutral-500 mb-2">
-            <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
+            <AlertTriangle className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Active Incidents</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">0</div>

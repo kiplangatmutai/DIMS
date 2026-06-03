@@ -1,16 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileCheck, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface HandoverRecord {
   id: string;
   consignmentId: string | null;
   formType: 'S11' | 'S13';
-  fileName: string;
+  fileName: string | null;
   confirmed: boolean;
+  physicalReceiptConfirmed?: boolean;
   status: string;
-  uploadedAt: string;
+  uploadedAt: string | null;
 }
 
 interface DataResponse<T> {
@@ -18,6 +20,8 @@ interface DataResponse<T> {
 }
 
 export function Handover() {
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [consignmentId, setConsignmentId] = useState('');
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [formType, setFormType] = useState<'S11' | 'S13'>('S11');
@@ -31,14 +35,21 @@ export function Handover() {
     [consignmentId, isConfirmed, selectedFile]
   );
 
-  const loadHandovers = async () => {
-    const response = await api.get<DataResponse<HandoverRecord[]>>('/handovers');
+  const loadHandovers = useCallback(async () => {
+    if (!facilityId) {
+      setHandovers([]);
+      return;
+    }
+
+    const response = await api.get<DataResponse<HandoverRecord[]>>(
+      `/handovers?facilityId=${encodeURIComponent(facilityId)}`
+    );
     setHandovers(response.data);
-  };
+  }, [facilityId]);
 
   useEffect(() => {
     loadHandovers().catch(() => setHandovers([]));
-  }, []);
+  }, [loadHandovers]);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -76,7 +87,9 @@ export function Handover() {
         fileType: selectedFile.type,
         fileSize: selectedFile.size,
         fileContent,
-        confirmed: true
+        confirmed: true,
+        physicalReceiptConfirmed: true,
+        facilityId: facilityId || null
       });
 
       setMessage('Voucher uploaded and physical receipt confirmed.');
@@ -118,10 +131,10 @@ export function Handover() {
                       {handover.consignmentId || handover.id}
                     </div>
                     <div className="text-sm text-neutral-500">
-                      {handover.formType} / {handover.fileName}
+                      {handover.formType} / {handover.fileName || 'No voucher uploaded'}
                     </div>
                     <div className="text-xs text-neutral-400 mt-1">
-                      {handover.uploadedAt.split('T')[0]}
+                      {handover.uploadedAt ? handover.uploadedAt.split('T')[0] : 'Awaiting upload'}
                     </div>
                   </div>
                   <StatusPill status={handover.status as any} />
@@ -211,7 +224,7 @@ export function Handover() {
             </div>
 
             {(message || error) ?
-            <div className={`rounded-md px-3 py-2 text-sm ${error ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+            <div className={`rounded-md px-3 py-2 text-sm ${error ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-white text-black border border-brand-200'}`}>
                 {error || message}
               </div> :
             null}

@@ -1,19 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { useRole } from '../../context/RoleContext';
+import { api } from '../../config/api';
+
+interface Requisition {
+  id: string;
+  sdpName: string;
+  hrCount: number;
+  deviceType: string;
+  existingQty: number;
+  requestedQty: number;
+  status: string;
+  timestamp: string;
+}
+
+interface DataResponse<T> {
+  data: T;
+}
 
 export function RequisitionDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { currentUser } = useRole();
-  const requisitionId = id || 'New Requisition';
+  const [requisition, setRequisition] = useState<Requisition | null>(null);
+  const [error, setError] = useState('');
+  const requisitionId = requisition?.id || id || 'New Requisition';
   const timeline = [
   'Facility Submission',
   'Sub-County Review',
   'County Approval',
   'DHA Authorization'];
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    api.get<DataResponse<Requisition>>(`/requisitions/${id}`)
+      .then((response) => setRequisition(response.data))
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load requisition.');
+      });
+  }, [id]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -33,8 +63,14 @@ export function RequisitionDetail() {
             Requisition tracking and approval timeline.
           </p>
         </div>
-        <StatusPill status="Draft" />
+        <StatusPill status={(requisition?.status || 'Draft') as any} />
       </div>
+
+      {error ? (
+        <div className="rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
+          {error}
+        </div>
+      ) : null}
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-6">
         <h2 className="font-semibold text-neutral-900 mb-6">Approval Chain</h2>
@@ -72,11 +108,21 @@ export function RequisitionDetail() {
             </tr>
           </thead>
           <tbody>
+            {requisition ? (
             <tr>
-              <td colSpan={3} className="px-6 py-8 text-center text-neutral-500">
-                No requested items found.
+              <td className="px-6 py-4 text-neutral-900">{requisition.sdpName}</td>
+              <td className="px-6 py-4 text-neutral-600">{requisition.deviceType}</td>
+              <td className="px-6 py-4 font-medium text-neutral-900">
+                {requisition.requestedQty}
               </td>
             </tr>
+            ) : (
+            <tr>
+              <td colSpan={3} className="px-6 py-8 text-center text-neutral-500">
+                Loading requisition details...
+              </td>
+            </tr>
+            )}
           </tbody>
         </table>
       </div>

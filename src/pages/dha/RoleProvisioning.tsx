@@ -13,6 +13,7 @@ interface ApiUser {
   name: string;
   username: string;
   email: string;
+  mobileNo?: string;
   role?: ApiRole;
   status?: string;
 }
@@ -25,6 +26,7 @@ const emptyForm = {
   name: '',
   username: '',
   email: '',
+  mobileNo: '',
   password: '',
   roleId: 'dha-onboarding-officer'
 };
@@ -148,6 +150,14 @@ export function RoleProvisioning() {
           
           <input
           required
+          type="tel"
+          placeholder="Mobile number"
+          value={form.mobileNo}
+          onChange={(event) => setForm({ ...form, mobileNo: event.target.value })}
+          className="px-3 py-2 border border-neutral-300 rounded-md text-sm focus:ring-brand-500 focus:border-brand-500" />
+          
+          <input
+          required
           type="password"
           placeholder="Temporary password"
           value={form.password}
@@ -176,7 +186,7 @@ export function RoleProvisioning() {
       null}
 
       {(message || error) ?
-      <div className={`rounded-md px-4 py-3 text-sm ${error ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+      <div className={`rounded-md px-4 py-3 text-sm ${error ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-white text-black border border-brand-200'}`}>
           {error || message}
         </div> :
       null}
@@ -215,6 +225,7 @@ export function RoleProvisioning() {
               <tr>
                 <th className="px-6 py-4 font-medium">Name</th>
                 <th className="px-6 py-4 font-medium">Email</th>
+                <th className="px-6 py-4 font-medium">Mobile</th>
                 <th className="px-6 py-4 font-medium">Role</th>
                 <th className="px-6 py-4 font-medium">Status</th>
               </tr>
@@ -229,6 +240,7 @@ export function RoleProvisioning() {
                     <div className="text-xs text-neutral-500">{user.username} / {user.id}</div>
                   </td>
                   <td className="px-6 py-4 text-neutral-600">{user.email}</td>
+                  <td className="px-6 py-4 text-neutral-600">{user.mobileNo || '-'}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 text-neutral-800">
                       <Shield className="w-3 h-3 mr-1" />
@@ -236,7 +248,7 @@ export function RoleProvisioning() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white text-black">
                       {user.status || 'Active'}
                     </span>
                   </td>
@@ -244,7 +256,7 @@ export function RoleProvisioning() {
               )}
               {filteredUsers.length === 0 ?
               <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-neutral-500">
+                  <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
                     No DHA users found.
                   </td>
                 </tr> :

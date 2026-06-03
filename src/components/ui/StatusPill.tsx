@@ -25,13 +25,13 @@ export function StatusPill({ status }: StatusPillProps) {
   let bg = 'bg-neutral-100';
   let text = 'text-neutral-700';
   let border = 'border-neutral-200';
-  // Red: Blocking / Critical
+  // Deep blue: Blocking / Critical
   if (['Rejected', 'Stolen'].includes(status)) {
-    bg = 'bg-brand-50';
-    text = 'text-brand-700';
-    border = 'border-brand-200';
+    bg = 'bg-brand-700';
+    text = 'text-white';
+    border = 'border-brand-800';
   }
-  // Sky Blue: In-flight / Pending
+  // Ice blue: In-flight / Pending
   else if (
   [
   'Submitted',
@@ -45,10 +45,10 @@ export function StatusPill({ status }: StatusPillProps) {
   includes(status))
   {
     bg = 'bg-accent-50';
-    text = 'text-accent-700';
+    text = 'text-black';
     border = 'border-accent-200';
   }
-  // Green: Resolved / Accepted
+  // White/black: Resolved / Accepted
   else if (
   [
   'Approved',
@@ -59,15 +59,15 @@ export function StatusPill({ status }: StatusPillProps) {
   'Recovered'].
   includes(status))
   {
-    bg = 'bg-emerald-50';
-    text = 'text-emerald-700';
-    border = 'border-emerald-200';
+    bg = 'bg-white';
+    text = 'text-black';
+    border = 'border-brand-200';
   }
-  // Amber: Action needed
+  // Cool blue: Action needed
   else if (['Awaiting Support'].includes(status)) {
-    bg = 'bg-amber-50';
-    text = 'text-amber-700';
-    border = 'border-amber-200';
+    bg = 'bg-brand-50';
+    text = 'text-black';
+    border = 'border-brand-200';
   }
   // Gray: Draft (default)
   return (

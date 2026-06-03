@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Shield, ShieldAlert, UserX } from 'lucide-react';
+import { Plus, Search, Shield, ShieldAlert, UserCheck, UserX } from 'lucide-react';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
 
@@ -23,6 +23,8 @@ interface ApiUser {
   name: string;
   username: string;
   email: string;
+  mobileNo?: string;
+  county?: string | null;
   role?: ApiRole;
   facility?: ApiFacility | null;
   status?: string;
@@ -42,9 +44,11 @@ const emptyForm = {
   name: '',
   username: '',
   email: '',
+  mobileNo: '',
   password: '',
   roleId: 'dha-admin',
-  facilityId: ''
+  facilityId: '',
+  county: ''
 };
 
 const emptyProfileForm = {
@@ -55,7 +59,7 @@ const emptyProfileForm = {
 };
 
 export function GlobalUsers() {
-  const { currentRole } = useRole();
+  const { currentRole, currentUser } = useRole();
   const canManageProfiles =
     currentRole.id === 'super-admin' ||
     currentRole.routes.some((route) => route.path === '/roles');
@@ -63,6 +67,7 @@ export function GlobalUsers() {
   const [roles, setRoles] = useState<ApiRole[]>([]);
   const [modules, setModules] = useState<ApiModule[]>([]);
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
+  const [counties, setCounties] = useState<string[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +85,8 @@ export function GlobalUsers() {
     const requests = [
       loadUsers(),
       api.get<DataResponse<ApiRole[]>>('/roles').then((response) => setRoles(response.data)),
-      api.get<DataResponse<ApiFacility[]>>('/facilities').then((response) => setFacilities(response.data))
+      api.get<DataResponse<ApiFacility[]>>('/facilities').then((response) => setFacilities(response.data)),
+      api.get<DataResponse<string[]>>('/counties').then((response) => setCounties(response.data))
     ];
 
     if (canManageProfiles) {
@@ -122,12 +128,36 @@ export function GlobalUsers() {
       ),
     [allowedRoleIds, currentRole.id, roles]
   );
+  const editableRoles = useMemo(
+    () =>
+      roles.filter(
+        (role) =>
+          allowedRoleIds.includes(role.id) ||
+          currentRole.id === 'super-admin' ||
+          role.id === currentRole.id
+      ),
+    [allowedRoleIds, currentRole.id, roles]
+  );
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === form.roleId),
+    [form.roleId, roles]
+  );
+  const isCountyRequired = Boolean(
+    currentRole.tier === 'County' ||
+    (selectedRole && ['County', 'Sub-County', 'Facility'].includes(selectedRole.tier))
+  );
 
   useEffect(() => {
     if (onboardingRoles.length > 0 && !onboardingRoles.some((role) => role.id === form.roleId)) {
       setForm((current) => ({ ...current, roleId: onboardingRoles[0].id }));
     }
   }, [form.roleId, onboardingRoles]);
+
+  useEffect(() => {
+    if (currentRole.tier === 'County' && currentUser?.county && !form.county) {
+      setForm((current) => ({ ...current, county: currentUser.county || '' }));
+    }
+  }, [currentRole.tier, currentUser?.county, form.county]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -138,7 +168,8 @@ export function GlobalUsers() {
     try {
       await api.post('/users', {
         ...form,
-        facilityId: form.facilityId || null
+        facilityId: form.facilityId || null,
+        county: form.county || null
       });
       setForm(emptyForm);
       setMessage('User onboarded successfully.');
@@ -184,17 +215,27 @@ export function GlobalUsers() {
     });
   };
 
-  const disableUser = async (userId: string) => {
+  const updateUser = async (userId: string, updates: Record<string, unknown>, successMessage: string) => {
     setError('');
     setMessage('');
 
     try {
-      await api.patch(`/users/${userId}`, { status: 'Disabled' });
-      setMessage('User disabled successfully.');
+      await api.patch(`/users/${userId}`, updates);
+      setMessage(successMessage);
       await loadUsers();
-    } catch (disableError) {
-      setError(disableError instanceof Error ? disableError.message : 'Unable to disable user.');
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Unable to update user.');
     }
+  };
+
+  const toggleUserStatus = (user: ApiUser) => {
+    const nextStatus = user.status === 'Disabled' ? 'Active' : 'Disabled';
+    const label = nextStatus === 'Active' ? 'enabled' : 'disabled';
+    updateUser(user.id, { status: nextStatus }, `User ${label} successfully.`);
+  };
+
+  const assignProfile = (user: ApiUser, roleId: string) => {
+    updateUser(user.id, { roleId }, 'Profile assigned successfully.');
   };
 
   return (
@@ -351,6 +392,18 @@ export function GlobalUsers() {
         </div>
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">
+            Mobile number
+          </label>
+          <input
+            required
+            type="tel"
+            value={form.mobileNo}
+            onChange={(event) => setForm({ ...form, mobileNo: event.target.value })}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:ring-brand-500 focus:border-brand-500" />
+          
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
             Temporary password
           </label>
           <input
@@ -379,6 +432,24 @@ export function GlobalUsers() {
         </div>
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">
+            County {isCountyRequired ? '' : '(optional)'}
+          </label>
+          <select
+            required={isCountyRequired}
+            value={form.county}
+            onChange={(event) => setForm({ ...form, county: event.target.value })}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm bg-white focus:ring-brand-500 focus:border-brand-500">
+            
+            <option value="">Select county</option>
+            {counties.map((county) =>
+            <option key={county} value={county}>
+                {county}
+              </option>
+            )}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
             Facility
           </label>
           <select
@@ -397,7 +468,7 @@ export function GlobalUsers() {
 
         <div className="md:col-span-2 xl:col-span-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-sm">
-            {message ? <span className="text-emerald-700">{message}</span> : null}
+            {message ? <span className="text-black">{message}</span> : null}
             {error ? <span className="text-brand-700">{error}</span> : null}
           </div>
           <button
@@ -473,6 +544,7 @@ export function GlobalUsers() {
               <tr>
                 <th className="px-6 py-4 font-medium">User Details</th>
                 <th className="px-6 py-4 font-medium">Role</th>
+                <th className="px-6 py-4 font-medium">County</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Action</th>
               </tr>
@@ -487,33 +559,69 @@ export function GlobalUsers() {
                     <div className="text-xs text-neutral-500">
                       {user.username} / {user.email} / {user.id}
                     </div>
+                    <div className="text-xs text-neutral-500">
+                      Mobile: {user.mobileNo || '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-neutral-900">{user.role?.name || '-'}</div>
+                    <select
+                      value={user.role?.id || ''}
+                      onChange={(event) => assignProfile(user, event.target.value)}
+                      className="w-full min-w-48 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm text-neutral-900 focus:border-brand-500 focus:ring-brand-500">
+                      
+                      {editableRoles.map((role) =>
+                      <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      )}
+                    </select>
                     <div className="text-xs text-neutral-500">
                       {user.facility?.name || 'No facility assigned'}
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-neutral-600">
+                    <select
+                      value={user.county || ''}
+                      onChange={(event) =>
+                        updateUser(
+                          user.id,
+                          { county: event.target.value || null },
+                          'County assignment updated successfully.'
+                        )
+                      }
+                      className="w-full min-w-40 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm text-neutral-700 focus:border-brand-500 focus:ring-brand-500">
+                      
+                      <option value="">No county</option>
+                      {counties.map((county) =>
+                      <option key={county} value={county}>
+                          {county}
+                        </option>
+                      )}
+                    </select>
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.status === 'Disabled' ? 'bg-neutral-100 text-neutral-600' : 'bg-white text-black'}`}>
                       {user.status || 'Active'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      disabled={user.status === 'Disabled'}
-                      onClick={() => disableUser(user.id)}
-                      className="text-brand-600 hover:text-brand-800 disabled:text-neutral-400 font-medium text-sm inline-flex items-center">
+                      onClick={() => toggleUserStatus(user)}
+                      className="text-brand-600 hover:text-brand-800 font-medium text-sm inline-flex items-center">
                       
-                      <UserX className="w-4 h-4 mr-1" />
-                      Disable
+                      {user.status === 'Disabled' ? (
+                        <UserCheck className="w-4 h-4 mr-1" />
+                      ) : (
+                        <UserX className="w-4 h-4 mr-1" />
+                      )}
+                      {user.status === 'Disabled' ? 'Enable' : 'Disable'}
                     </button>
                   </td>
                 </tr>
               )}
               {filteredUsers.length === 0 ?
               <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-neutral-500">
+                  <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
                     No users found.
                   </td>
                 </tr> :

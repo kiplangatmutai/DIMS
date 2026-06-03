@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, Filter, Download } from 'lucide-react';
-import { InventoryItem } from '../../data/mockData';
+import { InventoryItem } from '../../data/referenceData';
 export function SubCountyInventory() {
   const inventory: InventoryItem[] = [];
 

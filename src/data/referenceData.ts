@@ -26,14 +26,4 @@ export interface Requisition {
   timestamp: string;
 }
 
-export const COUNTIES: string[] = [];
-
-export const FACILITIES: Facility[] = [];
-
-
 export const DEVICE_TYPES = ['Tablet', 'Desktop', 'Laptop', 'Biometric'];
-
-export const MOCK_INVENTORY: InventoryItem[] = [];
-
-
-export const MOCK_REQUISITIONS: Requisition[] = [];

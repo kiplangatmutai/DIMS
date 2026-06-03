@@ -7,7 +7,7 @@ import {
   Shield,
   Users
 } from 'lucide-react';
-import { DEVICE_TYPES } from '../data/mockData';
+import { DEVICE_TYPES } from '../data/referenceData';
 import { Logo } from '../components/ui/Logo';
 import { KenyaCountyMap } from '../components/maps/KenyaCountyMap';
 
@@ -80,10 +80,10 @@ export function PublicLanding() {
             <div className="text-3xl font-bold mb-1">0</div>
             <div className="text-neutral-400 text-sm">Active Facilities</div>
           </div>
-            <div className="flex flex-col items-center text-center">
+          <div className="flex flex-col items-center text-center">
               <MapIcon className="w-8 h-8 text-brand-500 mb-3" />
-            <div className="text-3xl font-bold mb-1">47</div>
-            <div className="text-neutral-400 text-sm">Counties Mapped</div>
+            <div className="text-3xl font-bold mb-1">0</div>
+            <div className="text-neutral-400 text-sm">Counties With Records</div>
           </div>
           <div className="flex flex-col items-center text-center">
             <Server className="w-8 h-8 text-brand-500 mb-3" />

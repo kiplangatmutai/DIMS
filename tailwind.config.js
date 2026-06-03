@@ -8,18 +8,22 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          500: '#ef4444',
-          600: '#dc2626', // Primary Red
-          700: '#b91c1c',
-          900: '#7f1d1d',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          500: '#3b82f6',
+          600: '#2563eb', // Primary cool blue
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#172554',
         },
         accent: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9', // Sky Blue
+          50: '#f8fafc',
+          100: '#e2e8f0',
+          200: '#cbd5e1',
+          500: '#0ea5e9', // Ice blue accent
           600: '#0284c7',
+          700: '#0369a1',
         }
       },
       fontFamily: {

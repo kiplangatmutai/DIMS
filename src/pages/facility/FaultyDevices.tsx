@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface Ticket {
   id: string;
@@ -17,19 +18,29 @@ interface DataResponse<T> {
 }
 
 export function FaultyDevices() {
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || tickets[0];
 
-  const loadTickets = async () => {
-    const response = await api.get<DataResponse<Ticket[]>>('/maintenance-tickets');
+  const loadTickets = useCallback(async () => {
+    if (!facilityId) {
+      setTickets([]);
+      setSelectedTicketId(null);
+      return;
+    }
+
+    const response = await api.get<DataResponse<Ticket[]>>(
+      `/maintenance-tickets?facilityId=${encodeURIComponent(facilityId)}`
+    );
     setTickets(response.data);
     setSelectedTicketId((current) => current || response.data[0]?.id || null);
-  };
+  }, [facilityId]);
 
   useEffect(() => {
     loadTickets().catch(() => setTickets([]));
-  }, []);
+  }, [loadTickets]);
 
   const createTicket = async () => {
     const deviceType = window.prompt('Device type');
@@ -43,7 +54,8 @@ export function FaultyDevices() {
     await api.post('/maintenance-tickets', {
       deviceType,
       identifier,
-      issue
+      issue,
+      facilityId: facilityId || null
     });
     await loadTickets();
   };

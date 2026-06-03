@@ -6,6 +6,9 @@ export interface AuthUser {
   name?: string;
   username?: string;
   email: string;
+  mobileNo?: string | null;
+  facilityId?: string | null;
+  county?: string | null;
   role?: {
     id: string;
     name?: string;

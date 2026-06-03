@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Filter, Wrench, ShieldAlert } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface InventoryItem {
   id: string;
@@ -18,18 +19,27 @@ interface DataResponse<T> {
 }
 
 export function ActiveInventory() {
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [searchTerm, setSearchTerm] = useState('');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [message, setMessage] = useState('');
 
-  const loadInventory = async () => {
-    const response = await api.get<DataResponse<InventoryItem[]>>('/inventory');
+  const loadInventory = useCallback(async () => {
+    if (!facilityId) {
+      setInventory([]);
+      return;
+    }
+
+    const response = await api.get<DataResponse<InventoryItem[]>>(
+      `/inventory?facilityId=${encodeURIComponent(facilityId)}`
+    );
     setInventory(response.data);
-  };
+  }, [facilityId]);
 
   useEffect(() => {
     loadInventory().catch(() => setInventory([]));
-  }, []);
+  }, [loadInventory]);
 
   const filteredInventory = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -92,7 +102,7 @@ export function ActiveInventory() {
         </p>
       </div>
       {message ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-md border border-brand-200 bg-white px-4 py-3 text-sm text-black">
           {message}
         </div>
       ) : null}
@@ -154,7 +164,7 @@ export function ActiveInventory() {
                     <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                       onClick={() => reportFaulty(inv)}
-                      className="text-amber-600 hover:text-amber-800 font-medium text-xs flex items-center bg-amber-50 px-2 py-1 rounded"
+                      className="text-brand-600 hover:text-brand-800 font-medium text-xs flex items-center bg-brand-50 px-2 py-1 rounded"
                       disabled={inv.status !== 'Device Accepted'}>
                       
                         <Wrench className="w-3 h-3 mr-1" />

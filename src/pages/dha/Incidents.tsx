@@ -181,10 +181,10 @@ export function Incidents() {
                     <td className="px-6 py-4 text-accent-600 font-medium">
                       {m.inProgress}
                     </td>
-                    <td className="px-6 py-4 text-emerald-600 font-medium">
+                    <td className="px-6 py-4 text-brand-600 font-medium">
                       {m.replaced}
                     </td>
-                    <td className="px-6 py-4 text-amber-600 font-medium">
+                    <td className="px-6 py-4 text-brand-600 font-medium">
                       {m.pending}
                     </td>
                   </tr>

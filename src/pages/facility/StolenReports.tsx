@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShieldAlert, PlusCircle, FileText, MapPin } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 
 interface Incident {
   id: string;
@@ -18,17 +19,26 @@ interface DataResponse<T> {
 }
 
 export function StolenReports() {
+  const { currentUser } = useRole();
+  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [activeTab, setActiveTab] = useState<'Stolen' | 'Recovered'>('Stolen');
   const [incidents, setIncidents] = useState<Incident[]>([]);
 
-  const loadIncidents = async () => {
-    const response = await api.get<DataResponse<Incident[]>>('/stolen-reports');
+  const loadIncidents = useCallback(async () => {
+    if (!facilityId) {
+      setIncidents([]);
+      return;
+    }
+
+    const response = await api.get<DataResponse<Incident[]>>(
+      `/stolen-reports?facilityId=${encodeURIComponent(facilityId)}`
+    );
     setIncidents(response.data);
-  };
+  }, [facilityId]);
 
   useEffect(() => {
     loadIncidents().catch(() => setIncidents([]));
-  }, []);
+  }, [loadIncidents]);
 
   const filtered = useMemo(
     () => incidents.filter((incident) => incident.status === activeTab),
@@ -49,7 +59,8 @@ export function StolenReports() {
       identifier,
       obNumber,
       status: 'Stolen',
-      mdmLocked: true
+      mdmLocked: true,
+      facilityId: facilityId || null
     });
     await loadIncidents();
   };
@@ -84,7 +95,7 @@ export function StolenReports() {
           </button>
           <button
             onClick={() => setActiveTab('Recovered')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'Recovered' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`}>
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'Recovered' ? 'border-brand-600 text-brand-600' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`}>
             
             Recovered Devices
           </button>

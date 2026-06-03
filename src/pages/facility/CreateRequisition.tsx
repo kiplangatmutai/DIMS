@@ -10,7 +10,7 @@ import {
   Building,
   ShieldCheck } from
 'lucide-react';
-import { DEVICE_TYPES } from '../../data/mockData';
+import { DEVICE_TYPES } from '../../data/referenceData';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
 interface RequisitionRow {
@@ -91,7 +91,7 @@ export function CreateRequisition() {
           deviceType: row.deviceType,
           existingQty: Number(row.existingQty),
           requestedQty: Number(row.requestedQty),
-          facilityId: currentUser?.facility?.id || null,
+          facilityId: currentUser?.facility?.id || currentUser?.facilityId || null,
           status
         })
       )
@@ -152,8 +152,28 @@ export function CreateRequisition() {
           </p>
         </div>
 
+        <div className="inline-flex rounded-lg border border-neutral-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setStep('entry')}
+            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${step === 'entry' ? 'bg-brand-50 text-brand-700' : 'text-neutral-500 hover:text-neutral-800'}`}>
+            
+            <Clock className="h-4 w-4" />
+            Entry
+          </button>
+          <button
+            type="button"
+            onClick={reviewRequisition}
+            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${step === 'review' ? 'bg-brand-50 text-brand-700' : 'text-neutral-500 hover:text-neutral-800'}`}>
+            
+            <CheckCircle2 className="h-4 w-4" />
+            Review
+          </button>
+        </div>
+
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
+            {step === 'entry' ? (
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b border-neutral-200">
                 <tr>
@@ -168,12 +188,12 @@ export function CreateRequisition() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {rows.map((row, index) =>
+                {rows.map((row) =>
                 <tr key={row.id} className="hover:bg-neutral-50">
                     <td className="px-4 py-2">
                       <input
                       type="text"
-                      placeholder="e.g. Comprehensive Care Center"
+                      placeholder="Service delivery point name"
                       value={row.sdpName}
                       onChange={(e) =>
                       updateRow(row.id, 'sdpName', e.target.value)
@@ -257,7 +277,36 @@ export function CreateRequisition() {
                 )}
               </tbody>
             </table>
+            ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Service Delivery Point</th>
+                  <th className="px-4 py-3 font-medium">HR Count</th>
+                  <th className="px-4 py-3 font-medium">Device Type</th>
+                  <th className="px-4 py-3 font-medium">Existing</th>
+                  <th className="px-4 py-3 font-medium">Requested</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {rows.map((row) =>
+                <tr key={row.id}>
+                    <td className="px-4 py-3 font-medium text-neutral-900">
+                      {row.sdpName}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-600">{row.hrCount}</td>
+                    <td className="px-4 py-3 text-neutral-600">{row.deviceType}</td>
+                    <td className="px-4 py-3 text-neutral-600">{row.existingQty}</td>
+                    <td className="px-4 py-3 font-medium text-brand-700">
+                      {row.requestedQty}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            )}
           </div>
+          {step === 'entry' ? (
           <div className="p-4 border-t border-neutral-200 bg-neutral-50">
             <button
               onClick={addRow}
@@ -267,6 +316,7 @@ export function CreateRequisition() {
               Add Row
             </button>
           </div>
+          ) : null}
         </div>
 
         <div className="flex justify-end space-x-3">
@@ -275,17 +325,29 @@ export function CreateRequisition() {
               {error}
             </div>
           ) : null}
-          <button className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors">
-            <Save className="w-4 h-4 mr-2" />
-            Save as Draft
-          </button>
           <button
-            onClick={submitRequisition}
+            onClick={saveDraft}
+            disabled={isSubmitting}
+            className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors disabled:opacity-60">
+            <Save className="w-4 h-4 mr-2" />
+            {isSubmitting ? 'Saving...' : 'Save as Draft'}
+          </button>
+          {step === 'review' ? (
+          <button
+            onClick={() => setStep('entry')}
+            disabled={isSubmitting}
+            className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors disabled:opacity-60">
+            
+            Back to Edit
+          </button>
+          ) : null}
+          <button
+            onClick={step === 'review' ? submitRequisition : reviewRequisition}
             disabled={isSubmitting}
             className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm">
             
             <Send className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Submitting...' : 'Submit Requisition'}
+            {isSubmitting ? 'Submitting...' : step === 'review' ? 'Submit Requisition' : 'Review Requisition'}
           </button>
         </div>
       </div>

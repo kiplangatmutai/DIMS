@@ -450,7 +450,7 @@ export function KenyaCountyMap() {
       <div className="relative min-h-[620px] rounded-lg border border-neutral-200 bg-[#0a0e1a] overflow-hidden">
         <div className="absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/95 px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm">
           <MapPin className="h-4 w-4 text-brand-600" />
-          47 counties mapped
+          Kenya county reference map
         </div>
         <div
           className="h-[620px] px-4 pt-12 pb-4 sm:px-8 sm:pt-14"

@@ -82,7 +82,7 @@ export function UserManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-brand-50 text-brand-700'}`}>
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active' ? 'bg-white text-black' : 'bg-brand-50 text-brand-700'}`}>
                     
                       {user.status}
                     </span>
