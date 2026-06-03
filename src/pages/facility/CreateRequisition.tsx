@@ -36,6 +36,7 @@ export function CreateRequisition() {
   );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState<'entry' | 'review'>('entry');
   const addRow = () => {
     setRows([
     ...rows,
@@ -66,37 +67,70 @@ export function CreateRequisition() {
       )
     );
   };
+  const validateRows = () => {
+    const invalidRow = rows.find(
+      (row) =>
+        !row.sdpName ||
+        !row.hrCount ||
+        !row.deviceType ||
+        row.existingQty === '' ||
+        !row.requestedQty
+    );
+
+    if (invalidRow) {
+      throw new Error('Complete every row before continuing.');
+    }
+  };
+
+  const saveRows = async (status: 'Draft' | 'Pending Sub-County') => {
+    await Promise.all(
+      rows.map((row) =>
+        api.post('/requisitions', {
+          sdpName: row.sdpName,
+          hrCount: Number(row.hrCount),
+          deviceType: row.deviceType,
+          existingQty: Number(row.existingQty),
+          requestedQty: Number(row.requestedQty),
+          facilityId: currentUser?.facility?.id || null,
+          status
+        })
+      )
+    );
+  };
+
+  const saveDraft = async () => {
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      validateRows();
+      await saveRows('Draft');
+      navigate('/requisitions');
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to save draft.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const reviewRequisition = () => {
+    setError('');
+
+    try {
+      validateRows();
+      setStep('review');
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : 'Unable to review requisition.');
+    }
+  };
+
   const submitRequisition = async () => {
     setError('');
     setIsSubmitting(true);
 
     try {
-      const invalidRow = rows.find(
-        (row) =>
-          !row.sdpName ||
-          !row.hrCount ||
-          !row.deviceType ||
-          row.existingQty === '' ||
-          !row.requestedQty
-      );
-
-      if (invalidRow) {
-        throw new Error('Complete every row before submitting.');
-      }
-
-      await Promise.all(
-        rows.map((row) =>
-          api.post('/requisitions', {
-            sdpName: row.sdpName,
-            hrCount: Number(row.hrCount),
-            deviceType: row.deviceType,
-            existingQty: Number(row.existingQty),
-            requestedQty: Number(row.requestedQty),
-            facilityId: currentUser?.facility?.id || null
-          })
-        )
-      );
-
+      validateRows();
+      await saveRows('Pending Sub-County');
       navigate('/requisitions');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Unable to submit requisition.');

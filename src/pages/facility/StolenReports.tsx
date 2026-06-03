@@ -1,33 +1,59 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ShieldAlert, PlusCircle, FileText, MapPin } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
-import { MDMPanel } from '../../components/mdm/MDMPanel';
+import { api } from '../../config/api';
+
+interface Incident {
+  id: string;
+  deviceType: string;
+  identifier: string;
+  obNumber: string;
+  status: 'Stolen' | 'Recovered';
+  date: string;
+  mdmLocked: boolean;
+}
+
+interface DataResponse<T> {
+  data: T;
+}
+
 export function StolenReports() {
   const [activeTab, setActiveTab] = useState<'Stolen' | 'Recovered'>('Stolen');
-  const [selectedIncident, setSelectedIncident] = useState<string | null>(
-    'INC-2026-012'
-  );
-  const incidents = [
-  {
-    id: 'INC-2026-012',
-    deviceType: 'Laptop',
-    identifier: 'LT-88219B',
-    obNumber: 'OB/12/01/2026',
-    status: 'Stolen',
-    date: '2026-01-20',
-    mdmLocked: true
-  },
-  {
-    id: 'INC-2025-088',
-    deviceType: 'Tablet',
-    identifier: '354920108471111',
-    obNumber: 'OB/44/11/2025',
-    status: 'Recovered',
-    date: '2025-11-05',
-    mdmLocked: false
-  }];
+  const [incidents, setIncidents] = useState<Incident[]>([]);
 
-  const filtered = incidents.filter((i) => i.status === activeTab);
+  const loadIncidents = async () => {
+    const response = await api.get<DataResponse<Incident[]>>('/stolen-reports');
+    setIncidents(response.data);
+  };
+
+  useEffect(() => {
+    loadIncidents().catch(() => setIncidents([]));
+  }, []);
+
+  const filtered = useMemo(
+    () => incidents.filter((incident) => incident.status === activeTab),
+    [activeTab, incidents]
+  );
+
+  const createReport = async () => {
+    const deviceType = window.prompt('Device type');
+    const identifier = window.prompt('IMEI or serial number');
+    const obNumber = window.prompt('Police OB number');
+
+    if (!deviceType || !identifier || !obNumber) {
+      return;
+    }
+
+    await api.post('/stolen-reports', {
+      deviceType,
+      identifier,
+      obNumber,
+      status: 'Stolen',
+      mdmLocked: true
+    });
+    await loadIncidents();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -36,11 +62,13 @@ export function StolenReports() {
             Security Incidents
           </h1>
           <p className="text-neutral-500 mt-1">
-            Report and track stolen devices. MDM lockdown is triggered
-            automatically.
+            Report and track stolen devices.
           </p>
         </div>
-        <button className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm">
+        <button
+          onClick={createReport}
+          className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm">
+          
           <PlusCircle className="w-4 h-4 mr-2" />
           Report Stolen Device
         </button>
@@ -70,25 +98,24 @@ export function StolenReports() {
             </div> :
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filtered.map((inc) =>
+              {filtered.map((incident) =>
             <div
-              key={inc.id}
-              onClick={() => setSelectedIncident(inc.id)}
-              className="border border-neutral-200 rounded-lg p-5 hover:border-brand-300 transition-colors cursor-pointer">
+              key={incident.id}
+              className="border border-neutral-200 rounded-lg p-5 hover:border-brand-300 transition-colors">
               
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <div className="text-xs text-neutral-500 mb-1">
-                        {inc.id} • {inc.date}
+                        {incident.id} / {incident.date}
                       </div>
                       <h3 className="font-bold text-neutral-900">
-                        {inc.deviceType}
+                        {incident.deviceType}
                       </h3>
                       <div className="text-sm text-neutral-600 font-mono">
-                        {inc.identifier}
+                        {incident.identifier}
                       </div>
                     </div>
-                    <StatusPill status={inc.status as any} />
+                    <StatusPill status={incident.status as any} />
                   </div>
 
                   <div className="space-y-3 mb-4">
@@ -96,24 +123,15 @@ export function StolenReports() {
                       <FileText className="w-4 h-4 mr-2 text-neutral-400" />
                       <span className="text-neutral-600">Police OB:</span>
                       <span className="ml-2 font-medium text-neutral-900">
-                        {inc.obNumber}
+                        {incident.obNumber}
                       </span>
                     </div>
-                    {inc.mdmLocked &&
+                    {incident.mdmLocked ?
                 <div className="flex items-center text-sm bg-brand-50 text-brand-700 p-2 rounded border border-brand-100">
                         <MapPin className="w-4 h-4 mr-2" />
-                        MDM Lockdown Active. GPS tracking enabled.
-                      </div>
-                }
-                  </div>
-
-                  <div className="pt-4 border-t border-neutral-100 flex space-x-3">
-                    <button className="text-sm font-medium text-brand-600 hover:text-brand-700">
-                      View Police Report
-                    </button>
-                    <button className="text-sm font-medium text-brand-600 hover:text-brand-700">
-                      View Facility Report
-                    </button>
+                        MDM lockdown requested.
+                      </div> :
+                null}
                   </div>
                 </div>
             )}
@@ -121,23 +139,5 @@ export function StolenReports() {
           }
         </div>
       </div>
-
-      {/* MDM Integration Panel for Selected Stolen Device */}
-      {selectedIncident && activeTab === 'Stolen' &&
-      <div className="mt-6">
-          <MDMPanel
-          deviceId="LT-88219B"
-          deviceType="Laptop"
-          lockStatus="locked"
-          lastSeen="2026-05-27 14:30:00"
-          lastKnownLocation={{
-            lat: -1.2921,
-            lng: 36.8219,
-            address: 'Mbagathi Road, Nairobi'
-          }} />
-        
-        </div>
-      }
     </div>);
-
 }

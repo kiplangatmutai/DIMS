@@ -1,9 +1,86 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Filter, Wrench, ShieldAlert } from 'lucide-react';
-import { MOCK_INVENTORY } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
+import { api } from '../../config/api';
+
+interface InventoryItem {
+  id: string;
+  deviceType: string;
+  imei: string | null;
+  serial: string | null;
+  status: string;
+  dateReceived: string;
+  facilityId: string | null;
+}
+
+interface DataResponse<T> {
+  data: T;
+}
+
 export function ActiveInventory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [message, setMessage] = useState('');
+
+  const loadInventory = async () => {
+    const response = await api.get<DataResponse<InventoryItem[]>>('/inventory');
+    setInventory(response.data);
+  };
+
+  useEffect(() => {
+    loadInventory().catch(() => setInventory([]));
+  }, []);
+
+  const filteredInventory = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return inventory;
+    }
+
+    return inventory.filter((item) =>
+      [item.deviceType, item.imei, item.serial, item.status]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term))
+    );
+  }, [inventory, searchTerm]);
+
+  const reportFaulty = async (item: InventoryItem) => {
+    const issue = window.prompt('Describe the device fault');
+
+    if (!issue) {
+      return;
+    }
+
+    await api.post('/maintenance-tickets', {
+      deviceType: item.deviceType,
+      identifier: item.imei || item.serial,
+      issue,
+      facilityId: item.facilityId
+    });
+    await api.patch(`/inventory/${item.id}`, { status: 'Awaiting Support' });
+    setMessage('Faulty device ticket created.');
+    await loadInventory();
+  };
+
+  const reportStolen = async (item: InventoryItem) => {
+    const obNumber = window.prompt('Enter police OB number');
+
+    if (!obNumber) {
+      return;
+    }
+
+    await api.post('/stolen-reports', {
+      deviceType: item.deviceType,
+      identifier: item.imei || item.serial,
+      obNumber,
+      facilityId: item.facilityId
+    });
+    await api.patch(`/inventory/${item.id}`, { status: 'Stolen' });
+    setMessage('Stolen device report created.');
+    await loadInventory();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -14,6 +91,11 @@ export function ActiveInventory() {
           Manage and track devices currently assigned to this facility.
         </p>
       </div>
+      {message ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {message}
+        </div>
+      ) : null}
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 border-b border-neutral-200 bg-neutral-50 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -48,7 +130,7 @@ export function ActiveInventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {MOCK_INVENTORY.map((inv) =>
+              {filteredInventory.map((inv) =>
               <tr
                 key={inv.id}
                 className="hover:bg-neutral-50 transition-colors group">
@@ -71,6 +153,7 @@ export function ActiveInventory() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
+                      onClick={() => reportFaulty(inv)}
                       className="text-amber-600 hover:text-amber-800 font-medium text-xs flex items-center bg-amber-50 px-2 py-1 rounded"
                       disabled={inv.status !== 'Device Accepted'}>
                       
@@ -78,6 +161,7 @@ export function ActiveInventory() {
                         Report Faulty
                       </button>
                       <button
+                      onClick={() => reportStolen(inv)}
                       className="text-brand-600 hover:text-brand-800 font-medium text-xs flex items-center bg-brand-50 px-2 py-1 rounded"
                       disabled={inv.status !== 'Device Accepted'}>
                       
@@ -88,6 +172,13 @@ export function ActiveInventory() {
                   </td>
                 </tr>
               )}
+              {filteredInventory.length === 0 ?
+              <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-neutral-500">
+                    No inventory records yet.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

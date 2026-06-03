@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
@@ -7,10 +7,69 @@ import {
   PlusCircle,
   ArrowRight } from
 'lucide-react';
-import { MOCK_INVENTORY, MOCK_REQUISITIONS } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
+import { api } from '../../config/api';
+
+interface DataResponse<T> {
+  data: T;
+}
+
+interface Summary {
+  activeDevices: number;
+  pendingRequests: number;
+  openTickets: number;
+  stolenIncidents: number;
+}
+
+interface Requisition {
+  id: string;
+  deviceType: string;
+  requestedQty: number;
+  status: string;
+  timestamp: string;
+}
+
+interface InventoryItem {
+  id: string;
+  deviceType: string;
+  imei: string | null;
+  serial: string | null;
+  status: string;
+  dateReceived: string;
+}
+
 export function FacilityDashboard() {
   const navigate = useNavigate();
+  const [summary, setSummary] = useState<Summary>({
+    activeDevices: 0,
+    pendingRequests: 0,
+    openTickets: 0,
+    stolenIncidents: 0
+  });
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+  const [inventoryAlerts, setInventoryAlerts] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<DataResponse<Summary>>('/dashboard/summary'),
+      api.get<DataResponse<Requisition[]>>('/requisitions'),
+      api.get<DataResponse<InventoryItem[]>>('/inventory')
+    ]).then(([summaryResponse, requisitionsResponse, inventoryResponse]) => {
+      setSummary(summaryResponse.data);
+      setRequisitions(requisitionsResponse.data.slice(0, 5));
+      setInventoryAlerts(
+        inventoryResponse.data.filter((item) => item.status !== 'Device Accepted').slice(0, 5)
+      );
+    }).catch(() => {
+      setSummary({
+        activeDevices: 0,
+        pendingRequests: 0,
+        openTickets: 0,
+        stolenIncidents: 0
+      });
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -38,7 +97,7 @@ export function FacilityDashboard() {
             <div className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Active Devices</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">142</div>
+          <div className="text-3xl font-bold text-neutral-900">{summary.activeDevices}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -46,7 +105,7 @@ export function FacilityDashboard() {
             <ClipboardList className="w-5 h-5 mr-2 text-accent-500" />
             <span className="text-sm font-medium">Pending Requests</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">3</div>
+          <div className="text-3xl font-bold text-neutral-900">{summary.pendingRequests}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -54,7 +113,7 @@ export function FacilityDashboard() {
             <Wrench className="w-5 h-5 mr-2 text-amber-500" />
             <span className="text-sm font-medium">Open Tickets</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">5</div>
+          <div className="text-3xl font-bold text-neutral-900">{summary.openTickets}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
@@ -62,7 +121,7 @@ export function FacilityDashboard() {
             <ShieldAlert className="w-5 h-5 mr-2 text-brand-600" />
             <span className="text-sm font-medium">Stolen Incidents</span>
           </div>
-          <div className="text-3xl font-bold text-neutral-900">1</div>
+          <div className="text-3xl font-bold text-neutral-900">{summary.stolenIncidents}</div>
         </div>
       </div>
 
@@ -81,7 +140,7 @@ export function FacilityDashboard() {
             </button>
           </div>
           <div className="divide-y divide-neutral-100 flex-1">
-            {MOCK_REQUISITIONS.map((req) =>
+            {requisitions.map((req) =>
             <div
               key={req.id}
               className="p-4 hover:bg-neutral-50 transition-colors">
@@ -94,10 +153,15 @@ export function FacilityDashboard() {
                   <span>
                     {req.deviceType} • Qty: {req.requestedQty}
                   </span>
-                  <span>{req.timestamp.split(' ')[0]}</span>
+                  <span>{req.timestamp.split('T')[0]}</span>
                 </div>
               </div>
             )}
+            {requisitions.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No requisitions recorded yet.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -113,8 +177,7 @@ export function FacilityDashboard() {
             </button>
           </div>
           <div className="divide-y divide-neutral-100 flex-1">
-            {MOCK_INVENTORY.filter((i) => i.status !== 'Device Accepted').map(
-              (inv) =>
+            {inventoryAlerts.map((inv) =>
               <div
                 key={inv.id}
                 className="p-4 hover:bg-neutral-50 transition-colors">
@@ -132,10 +195,8 @@ export function FacilityDashboard() {
                     <span>Reported: {inv.dateReceived}</span>
                   </div>
                 </div>
-
             )}
-            {MOCK_INVENTORY.filter((i) => i.status !== 'Device Accepted').
-            length === 0 &&
+            {inventoryAlerts.length === 0 &&
             <div className="p-8 text-center text-neutral-500">
                 No active alerts.
               </div>

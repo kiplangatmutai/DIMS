@@ -202,3 +202,7 @@ export const inventory = [];
 export const requisitions = [];
 
 export const handovers = [];
+
+export const maintenanceTickets = [];
+
+export const stolenReports = [];

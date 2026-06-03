@@ -9,9 +9,11 @@ import {
   facilities,
   handovers,
   inventory,
+  maintenanceTickets,
   modules,
   requisitions,
   roles,
+  stolenReports,
   users
 } from './server/data.mjs';
 
@@ -242,6 +244,8 @@ function getDashboardSummary() {
   const activeDevices = inventory.filter((item) => item.status === 'Device Accepted').length;
   const maintenanceDevices = inventory.filter((item) => item.status === 'Awaiting Support').length;
   const stolenDevices = inventory.filter((item) => item.status === 'Stolen').length;
+  const openTickets = maintenanceTickets.filter((item) => item.status !== 'Closed').length;
+  const stolenIncidents = stolenReports.filter((item) => item.status === 'Stolen').length;
   const pendingRequests = requisitions.filter((item) => item.status.startsWith('Pending')).length;
   const approvedRequests = requisitions.filter((item) => item.status === 'Approved').length;
 
@@ -250,6 +254,8 @@ function getDashboardSummary() {
     activeDevices,
     maintenanceDevices,
     stolenDevices,
+    openTickets,
+    stolenIncidents,
     pendingRequests,
     approvedRequests,
     totalFacilities: facilities.length,
@@ -274,7 +280,7 @@ function createRequisition(body) {
     deviceType: String(body.deviceType),
     existingQty: Number(body.existingQty),
     requestedQty: Number(body.requestedQty),
-    status: 'Pending Sub-County',
+    status: body.status === 'Draft' ? 'Draft' : 'Pending Sub-County',
     facilityId: body.facilityId || null,
     timestamp: new Date().toISOString()
   };
@@ -285,24 +291,153 @@ function createRequisition(body) {
 }
 
 function createInventoryItem(body) {
-  if (!body.deviceType || !body.facilityId) {
+  if (!body.deviceType) {
     return {
-      error: 'deviceType and facilityId are required.'
+      error: 'deviceType is required.'
     };
   }
 
   const created = {
-    id: `INV-${String(inventory.length + 1).padStart(3, '0')}`,
+    id: body.id || `INV-${String(inventory.length + 1).padStart(3, '0')}`,
     deviceType: String(body.deviceType),
     imei: body.imei || null,
     serial: body.serial || null,
     status: body.status || 'Device Accepted',
     dateReceived: body.dateReceived || new Date().toISOString().slice(0, 10),
-    facilityId: String(body.facilityId)
+    facilityId: body.facilityId ? String(body.facilityId) : null
   };
 
   inventory.unshift(created);
 
+  return { created };
+}
+
+function validateInventoryItem(body, rowNumber = null) {
+  const prefix = rowNumber ? `Row ${rowNumber}: ` : '';
+
+  if (!body.id) {
+    return `${prefix}id is required.`;
+  }
+
+  if (!body.deviceType) {
+    return `${prefix}deviceType is required.`;
+  }
+
+  if (!deviceTypes.includes(body.deviceType)) {
+    return `${prefix}deviceType must be one of ${deviceTypes.join(', ')}.`;
+  }
+
+  if (!body.imei && !body.serial) {
+    return `${prefix}imei or serial is required.`;
+  }
+
+  if (inventory.some((item) => item.id === body.id)) {
+    return `${prefix}duplicate inventory id ${body.id}.`;
+  }
+
+  if (body.imei && inventory.some((item) => item.imei === body.imei)) {
+    return `${prefix}duplicate IMEI ${body.imei}.`;
+  }
+
+  if (body.serial && inventory.some((item) => item.serial === body.serial)) {
+    return `${prefix}duplicate serial ${body.serial}.`;
+  }
+
+  return null;
+}
+
+function bulkCreateInventory(body) {
+  if (!Array.isArray(body.items)) {
+    return {
+      error: 'items must be an array.'
+    };
+  }
+
+  const errors = [];
+  const validItems = [];
+  const seenIds = new Set();
+  const seenImeis = new Set();
+  const seenSerials = new Set();
+
+  body.items.forEach((item, index) => {
+    const rowNumber = item.rowNumber || index + 2;
+    const duplicateInFile =
+      seenIds.has(item.id) ||
+      (item.imei && seenImeis.has(item.imei)) ||
+      (item.serial && seenSerials.has(item.serial));
+    const error = duplicateInFile
+      ? `Row ${rowNumber}: duplicate id, IMEI, or serial inside uploaded CSV.`
+      : validateInventoryItem(item, rowNumber);
+
+    if (error) {
+      errors.push({ row: rowNumber, message: error.replace(`Row ${rowNumber}: `, '') });
+      return;
+    }
+
+    seenIds.add(item.id);
+
+    if (item.imei) {
+      seenImeis.add(item.imei);
+    }
+
+    if (item.serial) {
+      seenSerials.add(item.serial);
+    }
+
+    validItems.push(item);
+  });
+
+  const saved = validItems.map((item) => {
+    const result = createInventoryItem(item);
+    return result.created;
+  });
+
+  return {
+    saved,
+    errors
+  };
+}
+
+function createMaintenanceTicket(body) {
+  if (!body.deviceType || !body.identifier || !body.issue) {
+    return {
+      error: 'deviceType, identifier, and issue are required.'
+    };
+  }
+
+  const created = {
+    id: `TKT-${String(maintenanceTickets.length + 1).padStart(3, '0')}`,
+    deviceType: body.deviceType,
+    identifier: body.identifier,
+    issue: body.issue,
+    status: body.status || 'Awaiting Support',
+    date: body.date || new Date().toISOString().slice(0, 10),
+    facilityId: body.facilityId || null
+  };
+
+  maintenanceTickets.unshift(created);
+  return { created };
+}
+
+function createStolenReport(body) {
+  if (!body.deviceType || !body.identifier || !body.obNumber) {
+    return {
+      error: 'deviceType, identifier, and obNumber are required.'
+    };
+  }
+
+  const created = {
+    id: `INC-${String(stolenReports.length + 1).padStart(3, '0')}`,
+    deviceType: body.deviceType,
+    identifier: body.identifier,
+    obNumber: body.obNumber,
+    status: body.status || 'Stolen',
+    date: body.date || new Date().toISOString().slice(0, 10),
+    mdmLocked: body.mdmLocked !== false,
+    facilityId: body.facilityId || null
+  };
+
+  stolenReports.unshift(created);
   return { created };
 }
 
@@ -502,6 +637,23 @@ async function handleApiRequest(request, response) {
       return sendJson(response, 201, { data: result.created });
     }
 
+    if (request.method === 'POST' && pathname === '/inventory/bulk') {
+      const result = bulkCreateInventory(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, {
+        data: {
+          saved: result.saved,
+          errors: result.errors,
+          savedCount: result.saved.length,
+          errorCount: result.errors.length
+        }
+      });
+    }
+
     const inventoryMatch = pathname.match(/^\/inventory\/([^/]+)$/);
 
     if (inventoryMatch && request.method === 'PATCH') {
@@ -547,6 +699,34 @@ async function handleApiRequest(request, response) {
 
     if (request.method === 'POST' && pathname === '/handovers') {
       const result = createHandover(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    if (request.method === 'GET' && pathname === '/maintenance-tickets') {
+      return sendJson(response, 200, { data: maintenanceTickets });
+    }
+
+    if (request.method === 'POST' && pathname === '/maintenance-tickets') {
+      const result = createMaintenanceTicket(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    if (request.method === 'GET' && pathname === '/stolen-reports') {
+      return sendJson(response, 200, { data: stolenReports });
+    }
+
+    if (request.method === 'POST' && pathname === '/stolen-reports') {
+      const result = createStolenReport(await readBody(request));
 
       if (result.error) {
         return badRequest(response, result.error);
