@@ -3,21 +3,7 @@ import { Truck, UploadCloud, CheckCircle2, FileText } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function ProofOfDelivery() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
-  const orders = [
-  {
-    id: 'ORD-2026-001',
-    vendor: 'HealthTech Solutions',
-    items: 150,
-    status: 'Dispatched',
-    date: '2026-05-26'
-  },
-  {
-    id: 'ORD-2026-002',
-    vendor: 'MedEquip Ltd',
-    items: 45,
-    status: 'Dispatched',
-    date: '2026-05-25'
-  }];
+  const orders: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -58,6 +44,11 @@ export function ProofOfDelivery() {
                 </div>
               </div>
             )}
+            {orders.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No inbound consignments found.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -72,7 +63,7 @@ export function ProofOfDelivery() {
                       {selectedOrder}
                     </h2>
                     <div className="text-sm text-neutral-500">
-                      Vendor: HealthTech Solutions
+                      Vendor: -
                     </div>
                   </div>
                   <StatusPill status="Dispatched" />
@@ -81,8 +72,7 @@ export function ProofOfDelivery() {
                 <div className="bg-accent-50 border border-accent-100 rounded-lg p-4 flex items-start">
                   <Truck className="w-5 h-5 text-accent-600 mr-3 mt-0.5" />
                   <div className="text-sm text-accent-800">
-                    This consignment contains 150 units destined for 12
-                    facilities. Uploading the PoD will transition all units to
+                    Uploading the PoD will transition delivered units to
                     'Pending Facility Acceptance'.
                   </div>
                 </div>
@@ -99,7 +89,7 @@ export function ProofOfDelivery() {
                         Tablets
                       </div>
                       <div className="text-xl font-bold text-neutral-900">
-                        120
+                        0
                       </div>
                     </div>
                     <div className="border border-neutral-200 rounded-lg p-3">
@@ -107,7 +97,7 @@ export function ProofOfDelivery() {
                         Desktops
                       </div>
                       <div className="text-xl font-bold text-neutral-900">
-                        30
+                        0
                       </div>
                     </div>
                   </div>

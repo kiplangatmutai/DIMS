@@ -1,28 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Search, PlusCircle, Shield, AlertCircle } from 'lucide-react';
 export function UserManagement() {
-  const users = [
-  {
-    id: 'USR-101',
-    name: 'Dr. Jane Doe',
-    role: 'Facility User',
-    facility: 'Mbagathi Hospital',
-    status: 'Active'
-  },
-  {
-    id: 'USR-102',
-    name: 'John Smith',
-    role: 'Sub-County Approver',
-    facility: 'Langata Sub-County',
-    status: 'Active'
-  },
-  {
-    id: 'USR-103',
-    name: 'Alice Johnson',
-    role: 'Facility User',
-    facility: 'Pumwani Maternity',
-    status: 'Suspended'
-  }];
+  const users: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -115,6 +94,13 @@ export function UserManagement() {
                   </td>
                 </tr>
               )}
+              {users.length === 0 ?
+              <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
+                    No users found.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

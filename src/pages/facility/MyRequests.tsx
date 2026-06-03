@@ -115,7 +115,7 @@ export function MyRequests() {
           </table>
         </div>
 
-        {/* Pagination (Mock) */}
+        {/* Pagination */}
         <div className="px-6 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
           <span className="text-sm text-neutral-500">
             Showing {requisitions.length} entries

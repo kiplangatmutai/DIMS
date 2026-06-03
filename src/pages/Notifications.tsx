@@ -1,33 +1,7 @@
 import React from 'react';
 import { Bell, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 export function Notifications() {
-  const notifications = [
-  {
-    id: 1,
-    title: 'Order ORD-2026-001 Dispatched',
-    message:
-    'Vendor HealthTech Solutions has dispatched the consignment. Awaiting County PoD.',
-    timestamp: '2026-05-27 14:20:00.104',
-    type: 'info',
-    read: false
-  },
-  {
-    id: 2,
-    title: 'MDM Lockdown Triggered',
-    message:
-    'Device LT-88219B reported stolen at Mbagathi Hospital. MDM lockdown successful.',
-    timestamp: '2026-05-27 10:15:22.891',
-    type: 'alert',
-    read: false
-  },
-  {
-    id: 3,
-    title: 'Requisition REQ-2026-041 Approved',
-    message: 'Sub-County has approved and merged your requisition.',
-    timestamp: '2026-05-26 09:14:22.104',
-    type: 'success',
-    read: true
-  }];
+  const notifications: any[] = [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -79,6 +53,11 @@ export function Notifications() {
               </div>
             </div>
           )}
+          {notifications.length === 0 ?
+          <div className="p-8 text-center text-neutral-500">
+              No notifications yet.
+            </div> :
+          null}
         </div>
       </div>
     </div>);

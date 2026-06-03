@@ -2,23 +2,7 @@ import React, { useState } from 'react';
 import { Search, Eye, CheckCircle2, ShoppingCart } from 'lucide-react';
 export function OrderSummary() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
-  const orders = [
-  {
-    id: 'ORD-2026-003',
-    county: 'Kisumu',
-    type: 'Mixed',
-    qty: 450,
-    timestamp: '2026-05-27 09:15:00',
-    status: 'Pending Acceptance'
-  },
-  {
-    id: 'ORD-2026-004',
-    county: 'Nakuru',
-    type: 'Tablet',
-    qty: 120,
-    timestamp: '2026-05-27 11:30:00',
-    status: 'Pending Acceptance'
-  }];
+  const orders: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -61,6 +45,11 @@ export function OrderSummary() {
                 </div>
               </div>
             )}
+            {orders.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No orders pending acceptance.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -72,7 +61,7 @@ export function OrderSummary() {
                   <h2 className="text-xl font-bold text-neutral-900 mb-1">
                     {selectedOrder}
                   </h2>
-                  <div className="text-sm text-neutral-500">Kisumu County</div>
+                  <div className="text-sm text-neutral-500">County: -</div>
                 </div>
                 <button className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 transition-colors">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -97,40 +86,9 @@ export function OrderSummary() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
-                    <tr className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-mono text-neutral-500">
-                        HF-30481
-                      </td>
-                      <td className="px-4 py-3 text-neutral-900">
-                        Jaramogi Oginga Odinga Teaching
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600">Tablet</td>
-                      <td className="px-4 py-3 text-center font-medium text-neutral-900">
-                        200
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-mono text-neutral-500">
-                        HF-30481
-                      </td>
-                      <td className="px-4 py-3 text-neutral-900">
-                        Jaramogi Oginga Odinga Teaching
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600">Desktop</td>
-                      <td className="px-4 py-3 text-center font-medium text-neutral-900">
-                        50
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-mono text-neutral-500">
-                        HF-30482
-                      </td>
-                      <td className="px-4 py-3 text-neutral-900">
-                        Lumumba Sub-County Hospital
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600">Tablet</td>
-                      <td className="px-4 py-3 text-center font-medium text-neutral-900">
-                        200
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                        No order line items found.
                       </td>
                     </tr>
                   </tbody>

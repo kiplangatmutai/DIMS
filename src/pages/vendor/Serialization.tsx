@@ -1,38 +1,29 @@
 import React, { useState } from 'react';
 import { Barcode, Save, Send } from 'lucide-react';
+
+interface SerializationItem {
+  id: number;
+  facility: string;
+  type: string;
+  identifier: string;
+}
+
 export function Serialization() {
-  const [items, setItems] = useState([
-  {
-    id: 1,
-    facility: 'Mbagathi Hospital',
-    type: 'Tablet',
-    identifier: ''
-  },
-  {
-    id: 2,
-    facility: 'Mbagathi Hospital',
-    type: 'Tablet',
-    identifier: ''
-  },
-  {
-    id: 3,
-    facility: 'Mbagathi Hospital',
-    type: 'Desktop',
-    identifier: ''
-  }]
-  );
+  const [items, setItems] = useState<SerializationItem[]>([]);
+
   const updateIdentifier = (id: number, value: string) => {
     setItems(
       items.map((item) =>
-      item.id === id ?
-      {
-        ...item,
-        identifier: value
-      } :
-      item
+        item.id === id
+          ? {
+              ...item,
+              identifier: value
+            }
+          : item
       )
     );
   };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex justify-between items-end">
@@ -41,7 +32,7 @@ export function Serialization() {
             Warehouse Serialization
           </h1>
           <p className="text-neutral-500 mt-1">
-            Map physical hardware identifiers to ORD-2026-001.
+            Map physical hardware identifiers to accepted orders.
           </p>
         </div>
         <div className="flex space-x-3">
@@ -64,7 +55,7 @@ export function Serialization() {
             Serial No.
           </div>
           <div className="text-sm font-medium text-neutral-900">
-            {items.filter((i) => i.identifier).length} / {items.length} Mapped
+            {items.filter((item) => item.identifier).length} / {items.length} Mapped
           </div>
         </div>
 
@@ -80,7 +71,7 @@ export function Serialization() {
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {items.map((item, idx) =>
-            <tr key={item.id} className="hover:bg-neutral-50">
+              <tr key={item.id} className="hover:bg-neutral-50">
                 <td className="px-6 py-4 text-neutral-500">{idx + 1}</td>
                 <td className="px-6 py-4 text-neutral-900">{item.facility}</td>
                 <td className="px-6 py-4 text-neutral-600">{item.type}</td>
@@ -89,22 +80,24 @@ export function Serialization() {
                 </td>
                 <td className="px-6 py-4">
                   <input
-                  type="text"
-                  value={item.identifier}
-                  onChange={(e) => updateIdentifier(item.id, e.target.value)}
-                  placeholder={
-                  item.type === 'Tablet' ?
-                  'Enter 15-digit IMEI' :
-                  'Enter Serial No'
-                  }
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:ring-brand-500 focus:border-brand-500 text-sm font-mono" />
-                
+                    type="text"
+                    value={item.identifier}
+                    onChange={(event) => updateIdentifier(item.id, event.target.value)}
+                    placeholder={item.type === 'Tablet' ? 'Enter 15-digit IMEI' : 'Enter Serial No'}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:ring-brand-500 focus:border-brand-500 text-sm font-mono" />
                 </td>
               </tr>
             )}
+            {items.length === 0 ?
+            <tr>
+                <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
+                  No accepted order items pending serialization.
+                </td>
+              </tr> :
+            null}
           </tbody>
         </table>
       </div>
-    </div>);
-
+    </div>
+  );
 }

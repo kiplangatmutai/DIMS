@@ -56,6 +56,9 @@ const emptyProfileForm = {
 
 export function GlobalUsers() {
   const { currentRole } = useRole();
+  const canManageProfiles =
+    currentRole.id === 'super-admin' ||
+    currentRole.routes.some((route) => route.path === '/roles');
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [roles, setRoles] = useState<ApiRole[]>([]);
   const [modules, setModules] = useState<ApiModule[]>([]);
@@ -74,15 +77,22 @@ export function GlobalUsers() {
   };
 
   useEffect(() => {
-    Promise.all([
+    const requests = [
       loadUsers(),
       api.get<DataResponse<ApiRole[]>>('/roles').then((response) => setRoles(response.data)),
-      api.get<DataResponse<ApiModule[]>>('/modules').then((response) => setModules(response.data)),
       api.get<DataResponse<ApiFacility[]>>('/facilities').then((response) => setFacilities(response.data))
-    ]).catch((loadError) => {
+    ];
+
+    if (canManageProfiles) {
+      requests.push(
+        api.get<DataResponse<ApiModule[]>>('/modules').then((response) => setModules(response.data))
+      );
+    }
+
+    Promise.all(requests).catch((loadError) => {
       setError(loadError instanceof Error ? loadError.message : 'Unable to load users.');
     });
-  }, []);
+  }, [canManageProfiles]);
 
   const filteredUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -200,14 +210,16 @@ export function GlobalUsers() {
         </div>
       </div>
 
+      {currentRole.id === 'super-admin' ? (
       <div className="bg-brand-50 border border-brand-200 rounded-lg p-4 flex items-start">
         <ShieldAlert className="w-5 h-5 text-brand-600 mr-3 mt-0.5 flex-shrink-0" />
         <div className="text-sm text-brand-800">
           <strong>Super Admin Privileges:</strong> User onboarding and disabling
           actions affect access across the entire system.
         </div>
-      </div>
+      </div>) : null}
 
+      {canManageProfiles ? (
       <form
         onSubmit={handleCreateProfile}
         className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 space-y-5">
@@ -297,6 +309,7 @@ export function GlobalUsers() {
           </div>
         </div>
       </form>
+      ) : null}
 
       <form
         onSubmit={handleSubmit}

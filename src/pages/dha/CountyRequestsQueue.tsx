@@ -2,62 +2,13 @@ import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function DHACountyRequestsQueue() {
-  const [selectedRequest, setSelectedRequest] = useState<string | null>(
-    'CTY-REQ-001'
-  );
-  const [expandedCounty, setExpandedCounty] = useState<string | null>('Nairobi');
-  const requests = [
-  {
-    id: 'CTY-REQ-001',
-    county: 'Nairobi',
-    subCounties: 3,
-    facilities: 12,
-    totalQty: 150,
-    status: 'Pending DHA',
-    date: '2026-05-27'
-  },
-  {
-    id: 'CTY-REQ-002',
-    county: 'Mombasa',
-    subCounties: 2,
-    facilities: 8,
-    totalQty: 85,
-    status: 'Pending DHA',
-    date: '2026-05-27'
-  }];
+  const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [expandedCounty, setExpandedCounty] = useState<string | null>(null);
+  const requests: any[] = [];
 
   const breakdown = {
-    county: 'Nairobi',
-    subCounties: [
-    {
-      name: 'Langata',
-      facilities: [
-      {
-        id: 'HF-10293',
-        name: 'Mbagathi Hospital',
-        device: 'Tablet',
-        qty: 10
-      },
-      {
-        id: 'HF-10294',
-        name: 'Langata Health Center',
-        device: 'Desktop',
-        qty: 3
-      }]
-
-    },
-    {
-      name: 'Kamukunji',
-      facilities: [
-      {
-        id: 'HF-10295',
-        name: 'Pumwani Maternity',
-        device: 'Tablet',
-        qty: 8
-      }]
-
-    }]
-
+    county: '-',
+    subCounties: [] as any[]
   };
   return (
     <div className="space-y-6">
@@ -108,6 +59,11 @@ export function DHACountyRequestsQueue() {
                 </div>
               </div>
             )}
+            {requests.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No county requests found.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -120,7 +76,7 @@ export function DHACountyRequestsQueue() {
                     {breakdown.county} County
                   </h2>
                   <div className="text-sm text-neutral-500 flex items-center">
-                    <span className="font-mono mr-3">CTY-REQ-001</span>
+                    <span className="font-mono mr-3">{selectedRequest}</span>
                     <StatusPill status="Pending DHA" />
                   </div>
                 </div>
@@ -215,9 +171,7 @@ export function DHACountyRequestsQueue() {
                     Vendor Selection
                   </label>
                   <select className="w-full px-3 py-2 border border-accent-200 rounded-md focus:ring-brand-500 focus:border-brand-500 text-sm bg-white">
-                    <option>HealthTech Solutions Ltd</option>
-                    <option>MedEquip Kenya</option>
-                    <option>Digital Health Supplies</option>
+                    <option>No vendors available</option>
                   </select>
                 </div>
               </div>

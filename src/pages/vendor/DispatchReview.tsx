@@ -3,34 +3,9 @@ import { Search, CheckCircle2, X, Send } from 'lucide-react';
 export function DispatchReview() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const orders = [
-  {
-    id: 'ORD-2026-001',
-    county: 'Nairobi',
-    units: 12,
-    submittedBy: 'Warehouse Team A',
-    date: '2026-05-27 10:15:00'
-  }];
+  const orders: any[] = [];
 
-  const serialization = [
-  {
-    county: 'Nairobi',
-    facilityId: 'HF-10293',
-    facilityName: 'Mbagathi Hospital',
-    deviceType: 'Tablet',
-    qty: 10,
-    imei: '354920108472910',
-    serial: null
-  },
-  {
-    county: 'Nairobi',
-    facilityId: 'HF-10293',
-    facilityName: 'Mbagathi Hospital',
-    deviceType: 'Desktop',
-    qty: 2,
-    imei: null,
-    serial: 'SN-99201A'
-  }];
+  const serialization: any[] = [];
 
   const handleApproveDispatch = () => {
     setShowSuccessBanner(true);
@@ -86,6 +61,11 @@ export function DispatchReview() {
                 </div>
               </div>
             )}
+            {orders.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No dispatches pending review.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -115,7 +95,7 @@ export function DispatchReview() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
-                    {serialization.map((item, idx) =>
+                          {serialization.map((item, idx) =>
                   <tr key={idx} className="hover:bg-neutral-50">
                         <td className="px-4 py-3 text-neutral-900">
                           {item.county}
@@ -140,6 +120,13 @@ export function DispatchReview() {
                         </td>
                       </tr>
                   )}
+                          {serialization.length === 0 ?
+                          <tr>
+                              <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
+                                No serialized devices found.
+                              </td>
+                            </tr> :
+                          null}
                   </tbody>
                 </table>
               </div>

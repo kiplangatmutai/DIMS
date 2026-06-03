@@ -118,5 +118,21 @@ INSERT INTO device_types (id, name, requires_imei, requires_serial) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO users (id, full_name, username, email, password_hash, role_id, facility_id) VALUES
-  ('USR-001', 'Super Admin', 'admin', 'admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'super-admin', NULL)
+  ('USR-001', 'Super Admin', 'admin', 'admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'super-admin', NULL),
+  ('USR-002', 'Admin User', 'system-admin', 'system-admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'admin', NULL),
+  ('USR-003', 'Vendor Admin', 'vendor-admin', 'vendor-admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'vendor-admin', NULL),
+  ('USR-004', 'Vendor Order Accepter', 'vendor-orders', 'vendor-orders@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'vendor-order-accepter', NULL),
+  ('USR-005', 'Vendor Service Delivery', 'vendor-service', 'vendor-service@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'vendor-service-delivery', NULL),
+  ('USR-006', 'Vendor Warehouse Dispatcher', 'vendor-warehouse', 'vendor-warehouse@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'vendor-warehouse-dispatcher', NULL),
+  ('USR-007', 'Vendor After Sales', 'vendor-support', 'vendor-support@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'vendor-after-sales', NULL),
+  ('USR-008', 'DHA Admin', 'dha-admin', 'dha-admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'dha-admin', NULL),
+  ('USR-009', 'DHA Onboarding Officer', 'dha-onboarding', 'dha-onboarding@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'dha-onboarding-officer', NULL),
+  ('USR-010', 'DHA Approval Officer', 'dha-approval', 'dha-approval@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'dha-approval-officer', NULL),
+  ('USR-011', 'DHA Inventory Officer', 'dha-inventory', 'dha-inventory@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'dha-inventory-officer', NULL),
+  ('USR-012', 'County Admin', 'county-admin', 'county-admin@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'county-admin', NULL),
+  ('USR-013', 'County Onboarding Officer', 'county-onboarding', 'county-onboarding@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'county-onboarding-officer', NULL),
+  ('USR-014', 'County Request Approver', 'county-requests', 'county-requests@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'county-request-approver', NULL),
+  ('USR-015', 'County Inventory Officer', 'county-inventory', 'county-inventory@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'county-inventory-officer', NULL),
+  ('USR-016', 'Sub-County Approver', 'subcounty-approver', 'subcounty-approver@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'sub-county-approver', NULL),
+  ('USR-017', 'Facility User', 'facility-user', 'facility-user@health.go.ke', '$2b$10$replace-with-real-bcrypt-hash', 'facility-user', NULL)
 ON CONFLICT (id) DO NOTHING;

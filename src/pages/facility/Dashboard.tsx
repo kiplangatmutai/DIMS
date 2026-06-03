@@ -78,7 +78,7 @@ export function FacilityDashboard() {
             Facility Dashboard
           </h1>
           <p className="text-neutral-500 mt-1">
-            Mbagathi County Hospital (HF-10293)
+            Facility operational overview.
           </p>
         </div>
         <button

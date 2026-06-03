@@ -15,67 +15,11 @@ import {
   Line } from
 'recharts';
 export function Reports() {
-  const distributionData = [
-  {
-    name: 'Nairobi',
-    value: 45000
-  },
-  {
-    name: 'Mombasa',
-    value: 12000
-  },
-  {
-    name: 'Kisumu',
-    value: 15000
-  },
-  {
-    name: 'Nakuru',
-    value: 18000
-  },
-  {
-    name: 'Uasin Gishu',
-    value: 11000
-  }];
+  const distributionData: any[] = [];
 
-  const inventoryData = [
-  {
-    name: 'Tablets',
-    value: 65000
-  },
-  {
-    name: 'Desktops',
-    value: 30000
-  },
-  {
-    name: 'Laptops',
-    value: 15000
-  },
-  {
-    name: 'Biometrics',
-    value: 14592
-  }];
+  const inventoryData: any[] = [];
 
-  const trendData = [
-  {
-    month: 'Jan',
-    replacements: 120
-  },
-  {
-    month: 'Feb',
-    replacements: 150
-  },
-  {
-    month: 'Mar',
-    replacements: 180
-  },
-  {
-    month: 'Apr',
-    replacements: 140
-  },
-  {
-    month: 'May',
-    replacements: 210
-  }];
+  const trendData: any[] = [];
 
   const COLORS = ['#0ea5e9', '#dc2626', '#10b981', '#f59e0b', '#6366f1'];
   return (

@@ -1,56 +1,11 @@
 import React, { useState } from 'react';
 import { Search, Filter, Download, Wrench, ShieldAlert } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
-import { FACILITIES } from '../../data/mockData';
 export function MaintenanceQueue() {
   const [activeTab, setActiveTab] = useState<'Faulty' | 'Stolen'>('Faulty');
-  const faultyIncidents = [
-  {
-    id: 'TKT-092',
-    facility: 'HF-10293',
-    facilityName: 'Mbagathi Hospital',
-    subCounty: 'Langata',
-    device: 'Biometric',
-    identifier: 'BIO-4492X',
-    issue: 'Screen cracked, unresponsive',
-    status: 'Awaiting Support',
-    date: '2026-05-25'
-  },
-  {
-    id: 'TKT-081',
-    facility: 'HF-10294',
-    facilityName: 'Pumwani Maternity',
-    subCounty: 'Kamukunji',
-    device: 'Tablet',
-    identifier: '354920108472910',
-    issue: 'Battery failure',
-    status: 'In Progress',
-    date: '2026-05-20'
-  },
-  {
-    id: 'TKT-045',
-    facility: 'HF-10293',
-    facilityName: 'Mbagathi Hospital',
-    subCounty: 'Langata',
-    device: 'Desktop',
-    identifier: 'SN-1120B',
-    issue: 'Motherboard failure',
-    status: 'Replaced',
-    date: '2026-04-10'
-  }];
+  const faultyIncidents: any[] = [];
 
-  const stolenIncidents = [
-  {
-    id: 'INC-2026-012',
-    facility: 'HF-10293',
-    facilityName: 'Mbagathi Hospital',
-    subCounty: 'Langata',
-    device: 'Laptop',
-    identifier: 'LT-88219B',
-    obNumber: 'OB/12/01/2026',
-    status: 'Stolen',
-    date: '2026-01-20'
-  }];
+  const stolenIncidents: any[] = [];
 
   const data = activeTab === 'Faulty' ? faultyIncidents : stolenIncidents;
   return (
@@ -101,9 +56,6 @@ export function MaintenanceQueue() {
           </div>
           <select className="px-3 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium focus:outline-none focus:ring-1 focus:ring-brand-500 w-full sm:w-auto">
             <option>All Sub-Counties</option>
-            <option>Langata</option>
-            <option>Kamukunji</option>
-            <option>Westlands</option>
           </select>
         </div>
 
@@ -156,6 +108,13 @@ export function MaintenanceQueue() {
                   <td className="px-6 py-4 text-neutral-500">{item.date}</td>
                 </tr>
               )}
+              {data.length === 0 ?
+              <tr>
+                  <td colSpan={8} className="px-6 py-10 text-center text-neutral-500">
+                    No incidents found.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

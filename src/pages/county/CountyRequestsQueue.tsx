@@ -3,43 +3,9 @@ import { Search, Filter, Inbox } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function CountyRequestsQueue() {
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
-  const requests = [
-  {
-    id: 'SC-REQ-001',
-    subCounty: 'Langata',
-    facilities: 3,
-    totalQty: 15,
-    status: 'Pending County',
-    date: '2026-05-26'
-  },
-  {
-    id: 'SC-REQ-002',
-    subCounty: 'Kamukunji',
-    facilities: 2,
-    totalQty: 8,
-    status: 'Pending County',
-    date: '2026-05-26'
-  }];
+  const requests: any[] = [];
 
-  const detailItems = [
-  {
-    facility: 'Mbagathi Hospital',
-    type: 'Tablet',
-    requested: 10,
-    approved: 10
-  },
-  {
-    facility: 'Langata Health Center',
-    type: 'Desktop',
-    requested: 3,
-    approved: 3
-  },
-  {
-    facility: 'Karen Clinic',
-    type: 'Biometric',
-    requested: 2,
-    approved: 2
-  }];
+  const detailItems: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -87,6 +53,11 @@ export function CountyRequestsQueue() {
                 </div>
               </div>
             )}
+            {requests.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No Sub-County requests found.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -96,10 +67,10 @@ export function CountyRequestsQueue() {
               <div className="p-6 border-b border-neutral-200 flex justify-between items-start">
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 mb-1">
-                    Langata Sub-County
+                    Selected Sub-County
                   </h2>
                   <div className="text-sm text-neutral-500 flex items-center">
-                    <span className="font-mono mr-3">SC-REQ-001</span>
+                    <span className="font-mono mr-3">{selectedRequest}</span>
                     <StatusPill status="Pending County" />
                   </div>
                 </div>

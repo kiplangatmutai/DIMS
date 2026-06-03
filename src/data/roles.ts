@@ -64,7 +64,7 @@ export const ROLES: Role[] = [
     name: 'Super Admin',
     tier: 'Admin',
     description: 'Root administrator that onboards top-level administrators and creates custom profiles.',
-    routes: routesFor(['/dashboard', '/users', '/roles']),
+    routes: MODULES,
     canOnboardRoleIds: SUPER_ADMIN_ONBOARDING_ROLE_IDS
   },
   {

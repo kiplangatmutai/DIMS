@@ -1,8 +1,21 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/shell/Sidebar';
 import { TopBar } from '../components/shell/TopBar';
+import { useRole } from '../context/RoleContext';
+import { canAccessPath, firstAllowedPath } from '../utils/rbac';
 export function AppShell() {
+  const { currentRole, isAuthenticated } = useRole();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!canAccessPath(currentRole, location.pathname)) {
+    return <Navigate to={firstAllowedPath(currentRole)} replace />;
+  }
+
   return (
     <div className="flex h-screen bg-neutral-50 overflow-hidden">
       <Sidebar />

@@ -5,74 +5,11 @@ export function Incidents() {
   const [activeTab, setActiveTab] = useState<
     'Transfers' | 'Theft' | 'Maintenance'>(
     'Transfers');
-  const transfers = [
-  {
-    id: 'TRF-001',
-    originCounty: 'Nairobi',
-    destCounty: 'Kiambu',
-    facility: 'Thika Level 5',
-    device: 'Tablet',
-    qty: 5,
-    status: 'Approved',
-    date: '2026-05-20'
-  },
-  {
-    id: 'TRF-002',
-    originCounty: 'Mombasa',
-    destCounty: 'Kilifi',
-    facility: 'Malindi Hospital',
-    device: 'Desktop',
-    qty: 2,
-    status: 'Pending County',
-    date: '2026-05-25'
-  }];
+  const transfers: any[] = [];
 
-  const thefts = [
-  {
-    id: 'INC-2026-012',
-    county: 'Nairobi',
-    facility: 'Mbagathi Hospital',
-    device: 'Laptop',
-    identifier: 'LT-88219B',
-    obNumber: 'OB/12/01/2026',
-    mdmLocked: true,
-    status: 'Stolen',
-    date: '2026-01-20'
-  },
-  {
-    id: 'INC-2025-088',
-    county: 'Kisumu',
-    facility: 'JOOTRH',
-    device: 'Tablet',
-    identifier: '354920108471111',
-    obNumber: 'OB/44/11/2025',
-    mdmLocked: false,
-    status: 'Recovered',
-    date: '2025-11-05'
-  }];
+  const thefts: any[] = [];
 
-  const maintenance = [
-  {
-    county: 'Nairobi',
-    totalFaulty: 28,
-    inProgress: 12,
-    replaced: 8,
-    pending: 8
-  },
-  {
-    county: 'Mombasa',
-    totalFaulty: 15,
-    inProgress: 5,
-    replaced: 7,
-    pending: 3
-  },
-  {
-    county: 'Kisumu',
-    totalFaulty: 22,
-    inProgress: 10,
-    replaced: 6,
-    pending: 6
-  }];
+  const maintenance: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -154,6 +91,13 @@ export function Incidents() {
                     <td className="px-6 py-4 text-neutral-500">{t.date}</td>
                   </tr>
               )}
+                {transfers.length === 0 ?
+                <tr>
+                    <td colSpan={8} className="px-6 py-10 text-center text-neutral-500">
+                      No transfer records found.
+                    </td>
+                  </tr> :
+                null}
               </tbody>
             </table>
           }
@@ -203,6 +147,13 @@ export function Incidents() {
                     <td className="px-6 py-4 text-neutral-500">{t.date}</td>
                   </tr>
               )}
+                {thefts.length === 0 ?
+                <tr>
+                    <td colSpan={9} className="px-6 py-10 text-center text-neutral-500">
+                      No theft incidents found.
+                    </td>
+                  </tr> :
+                null}
               </tbody>
             </table>
           }
@@ -238,6 +189,13 @@ export function Incidents() {
                     </td>
                   </tr>
               )}
+                {maintenance.length === 0 ?
+                <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
+                      No maintenance summary records found.
+                    </td>
+                  </tr> :
+                null}
               </tbody>
             </table>
           }

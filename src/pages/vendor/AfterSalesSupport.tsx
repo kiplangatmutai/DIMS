@@ -9,30 +9,12 @@ type TicketStatus =
 'Returned' |
 'Replaced';
 export function AfterSalesSupport() {
-  const [selectedTicket, setSelectedTicket] = useState<string | null>('TKT-092');
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [ticketStatus, setTicketStatus] =
   useState<TicketStatus>('Awaiting Support');
   const [replacementIdentifier, setReplacementIdentifier] = useState('');
   const [showValidationError, setShowValidationError] = useState(false);
-  const tickets = [
-  {
-    id: 'TKT-092',
-    facility: 'Mbagathi Hospital',
-    device: 'Biometric',
-    identifier: 'BIO-4492X',
-    issue: 'Screen cracked, unresponsive',
-    status: 'Awaiting Support',
-    date: '2026-05-25'
-  },
-  {
-    id: 'TKT-081',
-    facility: 'Pumwani Maternity',
-    device: 'Tablet',
-    identifier: '354920108472910',
-    issue: 'Battery failure',
-    status: 'In Progress',
-    date: '2026-05-20'
-  }];
+  const tickets: any[] = [];
 
   const handleStatusChange = (newStatus: TicketStatus) => {
     setTicketStatus(newStatus);
@@ -87,6 +69,11 @@ export function AfterSalesSupport() {
                 </div>
               </div>
             )}
+            {tickets.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No incoming tickets found.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -100,7 +87,7 @@ export function AfterSalesSupport() {
                       {selectedTicket}
                     </h2>
                     <div className="text-sm text-neutral-500">
-                      Mbagathi Hospital
+                      -
                     </div>
                   </div>
                   <StatusPill status={ticketStatus as any} />
@@ -114,10 +101,10 @@ export function AfterSalesSupport() {
                   </div>
                   <div className="bg-neutral-50 p-3 rounded-md border border-neutral-200">
                     <div className="font-medium text-neutral-900">
-                      Biometric Scanner
+                      -
                     </div>
                     <div className="text-sm text-neutral-600 font-mono mt-1">
-                      Serial: BIO-4492X
+                      Serial: -
                     </div>
                   </div>
                 </div>
@@ -127,8 +114,7 @@ export function AfterSalesSupport() {
                     Issue Description
                   </div>
                   <div className="text-sm text-neutral-900 bg-neutral-50 p-3 rounded-md border border-neutral-200">
-                    Screen cracked, unresponsive to touch. Happened during
-                    patient intake.
+                    No issue selected.
                   </div>
                 </div>
 

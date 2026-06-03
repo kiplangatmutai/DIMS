@@ -5,24 +5,39 @@ type ApiOptions = RequestInit & {
   token?: string;
 };
 
+type ApiPayload = {
+  error?: {
+    message?: string;
+  };
+};
+
 async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { token, headers, ...requestOptions } = options;
+  const sessionToken =
+    token === undefined ? localStorage.getItem('dims_token') || undefined : token;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       ...headers
     }
   });
 
-  const payload = await response.json();
+  const text = await response.text();
+  let payload: ApiPayload = {};
+
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`API returned a non-JSON response (${response.status}).`);
+  }
 
   if (!response.ok) {
     throw new Error(payload?.error?.message || 'API request failed.');
   }
 
-  return payload;
+  return payload as T;
 }
 
 export const api = {

@@ -2,25 +2,7 @@ import React from 'react';
 import { ArrowRightLeft, PlusCircle } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function AssetTransfers() {
-  const transfers = [
-  {
-    id: 'TRF-001',
-    from: 'Mbagathi Hospital',
-    to: 'Pumwani Maternity',
-    device: 'Tablet',
-    qty: 5,
-    status: 'Approved',
-    date: '2026-05-20'
-  },
-  {
-    id: 'TRF-002',
-    from: 'Langata Health Center',
-    to: 'Mbagathi Hospital',
-    device: 'Desktop',
-    qty: 1,
-    status: 'Pending County',
-    date: '2026-05-25'
-  }];
+  const transfers: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -72,6 +54,13 @@ export function AssetTransfers() {
                   <td className="px-6 py-4 text-neutral-500">{trf.date}</td>
                 </tr>
               )}
+              {transfers.length === 0 ?
+              <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-neutral-500">
+                    No transfer tickets found.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>

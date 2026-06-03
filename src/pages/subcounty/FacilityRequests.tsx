@@ -12,43 +12,9 @@ import { StatusPill } from '../../components/ui/StatusPill';
 export function FacilityRequests() {
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const requests = [
-  {
-    id: 'REQ-2026-041',
-    facility: 'Mbagathi County Hospital',
-    items: 3,
-    totalQty: 15,
-    status: 'Pending Sub-County',
-    date: '2026-05-26'
-  },
-  {
-    id: 'REQ-2026-042',
-    facility: 'Langata Health Center',
-    items: 1,
-    totalQty: 2,
-    status: 'Pending Sub-County',
-    date: '2026-05-26'
-  }];
+  const requests: any[] = [];
 
-  const detailItems = [
-  {
-    sdp: 'Comprehensive Care Center',
-    type: 'Tablet',
-    requested: 10,
-    approved: 10
-  },
-  {
-    sdp: 'Maternity Wing',
-    type: 'Desktop',
-    requested: 3,
-    approved: 3
-  },
-  {
-    sdp: 'Outpatient Dept',
-    type: 'Biometric',
-    requested: 2,
-    approved: 2
-  }];
+  const detailItems: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -98,6 +64,11 @@ export function FacilityRequests() {
                 </div>
               </div>
             )}
+            {requests.length === 0 ?
+            <div className="p-8 text-center text-neutral-500">
+                No facility requests found.
+              </div> :
+            null}
           </div>
         </div>
 
@@ -108,10 +79,10 @@ export function FacilityRequests() {
               <div className="p-6 border-b border-neutral-200 flex justify-between items-start">
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 mb-1">
-                    Mbagathi County Hospital
+                    Selected Facility Request
                   </h2>
                   <div className="text-sm text-neutral-500 flex items-center">
-                    <span className="font-mono mr-3">REQ-2026-041</span>
+                    <span className="font-mono mr-3">{selectedRequest}</span>
                     <StatusPill status="Pending Sub-County" />
                   </div>
                 </div>

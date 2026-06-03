@@ -37,7 +37,7 @@ export const roles = [
     name: 'Super Admin',
     tier: 'Admin',
     description: 'Root administrator that onboards top-level administrators and creates custom profiles.',
-    routes: routesFor(['/dashboard', '/users', '/roles']),
+    routes: modules,
     canOnboardRoleIds: ['dha-admin', 'county-onboarding-officer', 'admin', 'vendor-admin']
   },
   {
@@ -192,6 +192,166 @@ export const users = [
     email: 'admin@health.go.ke',
     password: 'admin123',
     roleId: 'super-admin',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-002',
+    name: 'Admin User',
+    username: 'system-admin',
+    email: 'system-admin@health.go.ke',
+    password: 'admin123',
+    roleId: 'admin',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-003',
+    name: 'Vendor Admin',
+    username: 'vendor-admin',
+    email: 'vendor-admin@health.go.ke',
+    password: 'admin123',
+    roleId: 'vendor-admin',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-004',
+    name: 'Vendor Order Accepter',
+    username: 'vendor-orders',
+    email: 'vendor-orders@health.go.ke',
+    password: 'admin123',
+    roleId: 'vendor-order-accepter',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-005',
+    name: 'Vendor Service Delivery',
+    username: 'vendor-service',
+    email: 'vendor-service@health.go.ke',
+    password: 'admin123',
+    roleId: 'vendor-service-delivery',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-006',
+    name: 'Vendor Warehouse Dispatcher',
+    username: 'vendor-warehouse',
+    email: 'vendor-warehouse@health.go.ke',
+    password: 'admin123',
+    roleId: 'vendor-warehouse-dispatcher',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-007',
+    name: 'Vendor After Sales',
+    username: 'vendor-support',
+    email: 'vendor-support@health.go.ke',
+    password: 'admin123',
+    roleId: 'vendor-after-sales',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-008',
+    name: 'DHA Admin',
+    username: 'dha-admin',
+    email: 'dha-admin@health.go.ke',
+    password: 'admin123',
+    roleId: 'dha-admin',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-009',
+    name: 'DHA Onboarding Officer',
+    username: 'dha-onboarding',
+    email: 'dha-onboarding@health.go.ke',
+    password: 'admin123',
+    roleId: 'dha-onboarding-officer',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-010',
+    name: 'DHA Approval Officer',
+    username: 'dha-approval',
+    email: 'dha-approval@health.go.ke',
+    password: 'admin123',
+    roleId: 'dha-approval-officer',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-011',
+    name: 'DHA Inventory Officer',
+    username: 'dha-inventory',
+    email: 'dha-inventory@health.go.ke',
+    password: 'admin123',
+    roleId: 'dha-inventory-officer',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-012',
+    name: 'County Admin',
+    username: 'county-admin',
+    email: 'county-admin@health.go.ke',
+    password: 'admin123',
+    roleId: 'county-admin',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-013',
+    name: 'County Onboarding Officer',
+    username: 'county-onboarding',
+    email: 'county-onboarding@health.go.ke',
+    password: 'admin123',
+    roleId: 'county-onboarding-officer',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-014',
+    name: 'County Request Approver',
+    username: 'county-requests',
+    email: 'county-requests@health.go.ke',
+    password: 'admin123',
+    roleId: 'county-request-approver',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-015',
+    name: 'County Inventory Officer',
+    username: 'county-inventory',
+    email: 'county-inventory@health.go.ke',
+    password: 'admin123',
+    roleId: 'county-inventory-officer',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-016',
+    name: 'Sub-County Approver',
+    username: 'subcounty-approver',
+    email: 'subcounty-approver@health.go.ke',
+    password: 'admin123',
+    roleId: 'sub-county-approver',
+    facilityId: null,
+    status: 'Active'
+  },
+  {
+    id: 'USR-017',
+    name: 'Facility User',
+    username: 'facility-user',
+    email: 'facility-user@health.go.ke',
+    password: 'admin123',
+    roleId: 'facility-user',
     facilityId: null,
     status: 'Active'
   }

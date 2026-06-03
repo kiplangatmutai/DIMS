@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   counties,
   deviceTypes,
@@ -21,6 +21,7 @@ const port = Number(process.env.PORT || 3000);
 const basePath = '/dha-device-hub';
 const rootDir = fileURLToPath(new URL('./dist', import.meta.url));
 const indexFile = join(rootDir, 'index.html');
+const sessions = new Map();
 
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -97,6 +98,117 @@ function enrichUser(user) {
     role: roles.find((role) => role.id === user.roleId) || null,
     facility: facilities.find((facility) => facility.id === user.facilityId) || null
   };
+}
+
+function getBearerToken(request) {
+  const header = request.headers.authorization || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+}
+
+function getRequestUser(request) {
+  const token = getBearerToken(request);
+  const userId = token ? sessions.get(token) : null;
+  return userId ? users.find((user) => user.id === userId && user.status === 'Active') || null : null;
+}
+
+function getUserRole(user) {
+  return roles.find((role) => role.id === user?.roleId) || null;
+}
+
+function isSuperAdmin(user) {
+  return user?.roleId === 'super-admin';
+}
+
+function getUserTier(user) {
+  return getUserRole(user)?.tier || null;
+}
+
+function isFacilityScoped(user) {
+  return getUserTier(user) === 'Facility';
+}
+
+function filterFacilityScopedRecords(user, records) {
+  if (!isFacilityScoped(user)) {
+    return records;
+  }
+
+  if (!user.facilityId) {
+    return [];
+  }
+
+  return records.filter((record) => record.facilityId === user.facilityId);
+}
+
+function hasRouteAccess(user, routePaths) {
+  if (isSuperAdmin(user)) {
+    return true;
+  }
+
+  const role = getUserRole(user);
+  const allowedRoutes = role?.routes?.map((route) => route.path) || [];
+  return routePaths.some((routePath) => allowedRoutes.includes(routePath));
+}
+
+function requireUser(response, user) {
+  if (!user) {
+    unauthorized(response);
+    return false;
+  }
+
+  return true;
+}
+
+function requireRoute(response, user, routePaths) {
+  if (!requireUser(response, user)) {
+    return false;
+  }
+
+  if (!hasRouteAccess(user, routePaths)) {
+    forbidden(response);
+    return false;
+  }
+
+  return true;
+}
+
+function canManageRole(user, roleId) {
+  if (isSuperAdmin(user)) {
+    return true;
+  }
+
+  const role = getUserRole(user);
+  return Boolean(role?.canOnboardRoleIds?.includes(roleId));
+}
+
+function canManageUser(actor, targetUser) {
+  if (!targetUser) {
+    return false;
+  }
+
+  if (isSuperAdmin(actor)) {
+    return true;
+  }
+
+  return canManageRole(actor, targetUser.roleId);
+}
+
+function getVisibleRoles(user) {
+  if (isSuperAdmin(user)) {
+    return roles;
+  }
+
+  const role = getUserRole(user);
+  const visibleRoleIds = new Set([user.roleId, ...(role?.canOnboardRoleIds || [])]);
+  return roles.filter((candidate) => visibleRoleIds.has(candidate.id));
+}
+
+function getVisibleUsers(user) {
+  if (isSuperAdmin(user)) {
+    return users;
+  }
+
+  return users.filter((candidate) => candidate.id === user.id || canManageUser(user, candidate));
 }
 
 function slugify(value) {
@@ -183,7 +295,7 @@ function createRole(body) {
   return { created };
 }
 
-function createUser(body) {
+function createUser(body, actor) {
   const requiredFields = ['name', 'username', 'email', 'password', 'roleId'];
   const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
 
@@ -211,7 +323,7 @@ function createUser(body) {
     };
   }
 
-  if (!getAllowedOnboardingRoleIds().includes(body.roleId)) {
+  if (!canManageRole(actor, body.roleId) || !getAllowedOnboardingRoleIds().includes(body.roleId)) {
     return {
       error: 'Users cannot be onboarded into this profile.'
     };
@@ -465,6 +577,7 @@ function createHandover(body) {
     fileType: body.fileType || null,
     fileSize: body.fileSize || null,
     fileContent: body.fileContent || null,
+    facilityId: body.facilityId || null,
     confirmed: Boolean(body.confirmed),
     status: 'Accepted',
     uploadedAt: new Date().toISOString()
@@ -491,7 +604,7 @@ function parseApiUrl(request) {
   };
 }
 
-async function handleApiRequest(request, response) {
+export async function handleApiRequest(request, response) {
   if (request.method === 'OPTIONS') {
     return sendJson(response, 204, {});
   }
@@ -533,17 +646,24 @@ async function handleApiRequest(request, response) {
         });
       }
 
+      const token = randomUUID();
+      sessions.set(token, user.id);
+
       return sendJson(response, 200, {
-        token: randomUUID(),
+        token,
         user: enrichUser(user)
       });
     }
 
+    const actor = getRequestUser(request);
+
     if (request.method === 'GET' && pathname === '/roles') {
-      return sendJson(response, 200, { data: roles });
+      if (!requireUser(response, actor)) return;
+      return sendJson(response, 200, { data: getVisibleRoles(actor) });
     }
 
     if (request.method === 'POST' && pathname === '/roles') {
+      if (!requireRoute(response, actor, ['/roles'])) return;
       const result = createRole(await readBody(request));
 
       if (result.error) {
@@ -554,15 +674,18 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/modules') {
+      if (!requireRoute(response, actor, ['/roles'])) return;
       return sendJson(response, 200, { data: modules });
     }
 
     if (request.method === 'GET' && pathname === '/users') {
-      return sendJson(response, 200, { data: users.map(enrichUser) });
+      if (!requireRoute(response, actor, ['/users'])) return;
+      return sendJson(response, 200, { data: getVisibleUsers(actor).map(enrichUser) });
     }
 
     if (request.method === 'POST' && pathname === '/users') {
-      const result = createUser(await readBody(request));
+      if (!requireRoute(response, actor, ['/users'])) return;
+      const result = createUser(await readBody(request), actor);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -574,10 +697,15 @@ async function handleApiRequest(request, response) {
     const userMatch = pathname.match(/^\/users\/([^/]+)$/);
 
     if (userMatch && request.method === 'PATCH') {
+      if (!requireRoute(response, actor, ['/users'])) return;
       const user = users.find((candidate) => candidate.id === userMatch[1]);
 
       if (!user) {
         return notFound(response);
+      }
+
+      if (!canManageUser(actor, user)) {
+        return forbidden(response);
       }
 
       const body = await readBody(request);
@@ -591,10 +719,12 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/counties') {
+      if (!requireUser(response, actor)) return;
       return sendJson(response, 200, { data: counties });
     }
 
     if (request.method === 'GET' && pathname === '/facilities') {
+      if (!requireUser(response, actor)) return;
       const county = searchParams.get('county');
       const data = county
         ? facilities.filter((facility) => facility.county.toLowerCase() === county.toLowerCase())
@@ -604,17 +734,20 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/device-types') {
+      if (!requireUser(response, actor)) return;
       return sendJson(response, 200, { data: deviceTypes });
     }
 
     if (request.method === 'GET' && pathname === '/dashboard/summary') {
+      if (!requireRoute(response, actor, ['/dashboard'])) return;
       return sendJson(response, 200, { data: getDashboardSummary() });
     }
 
     if (request.method === 'GET' && pathname === '/inventory') {
+      if (!requireRoute(response, actor, ['/inventory'])) return;
       const facilityId = searchParams.get('facilityId');
       const status = searchParams.get('status');
-      let data = inventory;
+      let data = filterFacilityScopedRecords(actor, inventory);
 
       if (facilityId) {
         data = data.filter((item) => item.facilityId === facilityId);
@@ -628,7 +761,14 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'POST' && pathname === '/inventory') {
-      const result = createInventoryItem(await readBody(request));
+      if (!requireRoute(response, actor, ['/inventory', '/migration'])) return;
+      const body = await readBody(request);
+
+      if (isFacilityScoped(actor)) {
+        body.facilityId = actor.facilityId || null;
+      }
+
+      const result = createInventoryItem(body);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -638,6 +778,7 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'POST' && pathname === '/inventory/bulk') {
+      if (!requireRoute(response, actor, ['/migration'])) return;
       const result = bulkCreateInventory(await readBody(request));
 
       if (result.error) {
@@ -657,6 +798,7 @@ async function handleApiRequest(request, response) {
     const inventoryMatch = pathname.match(/^\/inventory\/([^/]+)$/);
 
     if (inventoryMatch && request.method === 'PATCH') {
+      if (!requireRoute(response, actor, ['/inventory'])) return;
       const item = inventory.find((candidate) => candidate.id === inventoryMatch[1]);
 
       if (!item) {
@@ -668,9 +810,10 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/requisitions') {
+      if (!requireRoute(response, actor, ['/requisitions', '/requests'])) return;
       const status = searchParams.get('status');
       const facilityId = searchParams.get('facilityId');
-      let data = requisitions;
+      let data = filterFacilityScopedRecords(actor, requisitions);
 
       if (status) {
         data = data.filter((item) => item.status.toLowerCase() === status.toLowerCase());
@@ -684,7 +827,14 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'POST' && pathname === '/requisitions') {
-      const result = createRequisition(await readBody(request));
+      if (!requireRoute(response, actor, ['/requisitions/create'])) return;
+      const body = await readBody(request);
+
+      if (isFacilityScoped(actor)) {
+        body.facilityId = actor.facilityId || null;
+      }
+
+      const result = createRequisition(body);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -694,11 +844,19 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/handovers') {
-      return sendJson(response, 200, { data: handovers });
+      if (!requireRoute(response, actor, ['/handover'])) return;
+      return sendJson(response, 200, { data: filterFacilityScopedRecords(actor, handovers) });
     }
 
     if (request.method === 'POST' && pathname === '/handovers') {
-      const result = createHandover(await readBody(request));
+      if (!requireRoute(response, actor, ['/handover'])) return;
+      const body = await readBody(request);
+
+      if (isFacilityScoped(actor)) {
+        body.facilityId = actor.facilityId || null;
+      }
+
+      const result = createHandover(body);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -708,11 +866,19 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/maintenance-tickets') {
-      return sendJson(response, 200, { data: maintenanceTickets });
+      if (!requireRoute(response, actor, ['/faulty', '/maintenance', '/tickets', '/incidents'])) return;
+      return sendJson(response, 200, { data: filterFacilityScopedRecords(actor, maintenanceTickets) });
     }
 
     if (request.method === 'POST' && pathname === '/maintenance-tickets') {
-      const result = createMaintenanceTicket(await readBody(request));
+      if (!requireRoute(response, actor, ['/faulty', '/maintenance', '/tickets'])) return;
+      const body = await readBody(request);
+
+      if (isFacilityScoped(actor)) {
+        body.facilityId = actor.facilityId || null;
+      }
+
+      const result = createMaintenanceTicket(body);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -722,11 +888,19 @@ async function handleApiRequest(request, response) {
     }
 
     if (request.method === 'GET' && pathname === '/stolen-reports') {
-      return sendJson(response, 200, { data: stolenReports });
+      if (!requireRoute(response, actor, ['/stolen', '/incidents', '/maintenance'])) return;
+      return sendJson(response, 200, { data: filterFacilityScopedRecords(actor, stolenReports) });
     }
 
     if (request.method === 'POST' && pathname === '/stolen-reports') {
-      const result = createStolenReport(await readBody(request));
+      if (!requireRoute(response, actor, ['/stolen', '/incidents'])) return;
+      const body = await readBody(request);
+
+      if (isFacilityScoped(actor)) {
+        body.facilityId = actor.facilityId || null;
+      }
+
+      const result = createStolenReport(body);
 
       if (result.error) {
         return badRequest(response, result.error);
@@ -738,6 +912,7 @@ async function handleApiRequest(request, response) {
     const requisitionMatch = pathname.match(/^\/requisitions\/([^/]+)$/);
 
     if (requisitionMatch && request.method === 'GET') {
+      if (!requireRoute(response, actor, ['/requisitions', '/requests'])) return;
       const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
 
       if (!requisition) {
@@ -748,6 +923,7 @@ async function handleApiRequest(request, response) {
     }
 
     if (requisitionMatch && request.method === 'PATCH') {
+      if (!requireRoute(response, actor, ['/requests'])) return;
       const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
 
       if (!requisition) {
@@ -784,31 +960,57 @@ function resolveFilePath(urlPath) {
   return indexFile;
 }
 
-const server = createServer(async (request, response) => {
-  if (parseApiUrl(request)) {
-    await handleApiRequest(request, response);
-    return;
-  }
+function createProductionServer() {
+  return createServer(async (request, response) => {
+    if (parseApiUrl(request)) {
+      await handleApiRequest(request, response);
+      return;
+    }
 
-  if (!existsSync(indexFile)) {
-    response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    response.end('Application build output was not found.');
-    return;
-  }
+    if (!existsSync(indexFile)) {
+      response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('Application build output was not found.');
+      return;
+    }
 
-  const filePath = resolveFilePath(request.url || '/');
-  const contentType = contentTypes[extname(filePath)] || 'application/octet-stream';
+    const filePath = resolveFilePath(request.url || '/');
+    const contentType = contentTypes[extname(filePath)] || 'application/octet-stream';
 
-  response.writeHead(200, {
-    'Content-Type': contentType,
-    'Cache-Control': filePath === indexFile
-      ? 'no-cache'
-      : 'public, max-age=31536000, immutable'
+    response.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': filePath === indexFile
+        ? 'no-cache'
+        : 'public, max-age=31536000, immutable'
+    });
+
+    createReadStream(filePath).pipe(response);
   });
+}
 
-  createReadStream(filePath).pipe(response);
-});
+function unauthorized(response) {
+  return sendJson(response, 401, {
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Sign in is required.'
+    }
+  });
+}
 
-server.listen(port, '0.0.0.0', () => {
-  console.log(`DHA Device Hub is listening on port ${port}`);
-});
+function forbidden(response) {
+  return sendJson(response, 403, {
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Your profile is not allowed to perform this action.'
+    }
+  });
+}
+
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(process.argv[1]).href
+  : false;
+
+if (isDirectRun) {
+  createProductionServer().listen(port, '0.0.0.0', () => {
+    console.log(`DHA Device Hub is listening on port ${port}`);
+  });
+}

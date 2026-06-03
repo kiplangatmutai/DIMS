@@ -351,15 +351,15 @@ export function CreateRequisition() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-accent-600">ID:</span>
-              <span className="font-medium">HF-10293</span>
+              <span className="font-medium">{currentUser?.facility?.id || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-accent-600">County:</span>
-              <span className="font-medium">Nairobi</span>
+              <span className="font-medium">-</span>
             </div>
             <div className="flex justify-between">
               <span className="text-accent-600">Sub-County:</span>
-              <span className="font-medium">Langata</span>
+              <span className="font-medium">-</span>
             </div>
           </div>
         </div>
