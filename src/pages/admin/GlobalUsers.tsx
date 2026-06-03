@@ -98,8 +98,11 @@ export function GlobalUsers() {
     );
   }, [searchTerm, users]);
 
-  const activeApiRole = roles.find((role) => role.id === currentRole.id);
-  const allowedRoleIds = activeApiRole?.canOnboardRoleIds || currentRole.canOnboardRoleIds || [];
+  const allowedRoleIds = useMemo(() => {
+    const activeApiRole = roles.find((role) => role.id === currentRole.id);
+
+    return activeApiRole?.canOnboardRoleIds || currentRole.canOnboardRoleIds || [];
+  }, [currentRole.canOnboardRoleIds, currentRole.id, roles]);
   const onboardingRoles = useMemo(
     () =>
       roles.filter(

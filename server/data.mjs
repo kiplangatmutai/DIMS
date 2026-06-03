@@ -200,3 +200,5 @@ export const users = [
 export const inventory = [];
 
 export const requisitions = [];
+
+export const handovers = [];

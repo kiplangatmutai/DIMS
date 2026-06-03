@@ -1,10 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Filter, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_REQUISITIONS } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
+import { api } from '../../config/api';
+
+interface Requisition {
+  id: string;
+  sdpName: string;
+  deviceType: string;
+  requestedQty: number;
+  status: string;
+  timestamp: string;
+}
+
+interface DataResponse<T> {
+  data: T;
+}
+
 export function MyRequests() {
   const navigate = useNavigate();
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+
+  useEffect(() => {
+    api.get<DataResponse<Requisition[]>>('/requisitions')
+      .then((response) => setRequisitions(response.data))
+      .catch(() => setRequisitions([]));
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -50,7 +72,7 @@ export function MyRequests() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {MOCK_REQUISITIONS.map((req) =>
+              {requisitions.map((req) =>
               <tr
                 key={req.id}
                 className="hover:bg-neutral-50 transition-colors group">
@@ -82,6 +104,13 @@ export function MyRequests() {
                   </td>
                 </tr>
               )}
+              {requisitions.length === 0 ?
+              <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-neutral-500">
+                    No requisitions recorded yet.
+                  </td>
+                </tr> :
+              null}
             </tbody>
           </table>
         </div>
@@ -89,7 +118,7 @@ export function MyRequests() {
         {/* Pagination (Mock) */}
         <div className="px-6 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between">
           <span className="text-sm text-neutral-500">
-            Showing 1 to 3 of 3 entries
+            Showing {requisitions.length} entries
           </span>
           <div className="flex space-x-1">
             <button className="px-3 py-1 border border-neutral-300 rounded bg-white text-neutral-400 cursor-not-allowed text-sm">

@@ -14,6 +14,26 @@ export function BulkMigration() {
     setUploadState('validating');
     setTimeout(() => setUploadState('results'), 1500);
   };
+  const downloadTemplate = () => {
+    const headers = [
+      'id',
+      'deviceType',
+      'imei',
+      'serial',
+      'status',
+      'dateReceived',
+      'facilityId'
+    ];
+    const csv = `${headers.join(',')}\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = 'dims_inventory_upload_template.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
@@ -37,7 +57,10 @@ export function BulkMigration() {
               master lists exactly.
             </p>
           </div>
-          <button className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors">
+          <button
+            onClick={downloadTemplate}
+            className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors">
+            
             <FileDown className="w-4 h-4 mr-2" />
             Download CSV Template
           </button>

@@ -1,7 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileCheck, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
+import { api } from '../../config/api';
 export function Handover() {
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [formType, setFormType] = useState<'S11' | 'S13'>('S11');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Unable to read voucher file.'));
+      reader.readAsDataURL(file);
+    });
+
+  const submitHandover = async () => {
+    setError('');
+    setMessage('');
+    setIsSubmitting(true);
+
+    try {
+      if (!isConfirmed) {
+        throw new Error('Confirm physical receipt before accepting inventory.');
+      }
+
+      if (!selectedFile) {
+        throw new Error('Upload a signed S11 or S13 voucher.');
+      }
+
+      const fileContent = await readFileAsDataUrl(selectedFile);
+
+      await api.post('/handovers', {
+        consignmentId: 'ORD-2026-001',
+        formType,
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size,
+        fileContent,
+        confirmed: true
+      });
+
+      setMessage('S11/S13 voucher uploaded and consignment accepted.');
+      setSelectedFile(null);
+      setIsConfirmed(false);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to submit handover.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -70,6 +123,8 @@ export function Handover() {
               <label className="flex items-center space-x-3 p-3 border border-neutral-200 rounded-lg hover:bg-neutral-50 cursor-pointer transition-colors">
                 <input
                   type="checkbox"
+                  checked={isConfirmed}
+                  onChange={(event) => setIsConfirmed(event.target.checked)}
                   className="w-5 h-5 text-brand-600 rounded border-neutral-300 focus:ring-brand-500" />
                 
                 <span className="text-sm font-medium text-neutral-900">
@@ -81,9 +136,29 @@ export function Handover() {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Upload Signed S11/S13 Voucher
+                Voucher Type
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-lg hover:border-brand-500 hover:bg-brand-50 transition-colors cursor-pointer group">
+              <select
+                value={formType}
+                onChange={(event) => setFormType(event.target.value as 'S11' | 'S13')}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm bg-white focus:ring-brand-500 focus:border-brand-500">
+                
+                <option value="S11">S11</option>
+                <option value="S13">S13</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Upload Signed Voucher
+              </label>
+              <label className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-lg hover:border-brand-500 hover:bg-brand-50 transition-colors cursor-pointer group">
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  className="sr-only"
+                  onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
+                
                 <div className="space-y-1 text-center">
                   <UploadCloud className="mx-auto h-12 w-12 text-neutral-400 group-hover:text-brand-500 transition-colors" />
                   <div className="flex text-sm text-neutral-600 justify-center">
@@ -93,16 +168,26 @@ export function Handover() {
                     <p className="pl-1">or drag and drop</p>
                   </div>
                   <p className="text-xs text-neutral-500">
-                    PDF, PNG, JPG up to 10MB
+                    {selectedFile ? selectedFile.name : 'PDF, PNG, JPG up to 10MB'}
                   </p>
                 </div>
-              </div>
+              </label>
             </div>
 
+            {(message || error) ?
+            <div className={`rounded-md px-3 py-2 text-sm ${error ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                {error || message}
+              </div> :
+            null}
+
             <div className="pt-4 border-t border-neutral-200">
-              <button className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
+              <button
+                onClick={submitHandover}
+                disabled={isSubmitting}
+                className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors disabled:opacity-60">
+                
                 <CheckCircle2 className="w-5 h-5 mr-2" />
-                Confirm Acceptance to Inventory
+                {isSubmitting ? 'Submitting...' : 'Confirm Acceptance to Inventory'}
               </button>
             </div>
           </div>

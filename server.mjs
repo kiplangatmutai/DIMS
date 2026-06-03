@@ -7,6 +7,7 @@ import {
   counties,
   deviceTypes,
   facilities,
+  handovers,
   inventory,
   modules,
   requisitions,
@@ -274,7 +275,7 @@ function createRequisition(body) {
     existingQty: Number(body.existingQty),
     requestedQty: Number(body.requestedQty),
     status: 'Pending Sub-County',
-    facilityId: body.facilityId || 'HF-10293',
+    facilityId: body.facilityId || null,
     timestamp: new Date().toISOString()
   };
 
@@ -301,6 +302,40 @@ function createInventoryItem(body) {
   };
 
   inventory.unshift(created);
+
+  return { created };
+}
+
+function createHandover(body) {
+  const requiredFields = ['formType', 'fileName'];
+  const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
+
+  if (missing.length > 0) {
+    return {
+      error: `Missing required field(s): ${missing.join(', ')}`
+    };
+  }
+
+  if (!['S11', 'S13'].includes(body.formType)) {
+    return {
+      error: 'formType must be S11 or S13.'
+    };
+  }
+
+  const created = {
+    id: `HND-${String(handovers.length + 1).padStart(3, '0')}`,
+    consignmentId: body.consignmentId || null,
+    formType: body.formType,
+    fileName: body.fileName,
+    fileType: body.fileType || null,
+    fileSize: body.fileSize || null,
+    fileContent: body.fileContent || null,
+    confirmed: Boolean(body.confirmed),
+    status: 'Accepted',
+    uploadedAt: new Date().toISOString()
+  };
+
+  handovers.unshift(created);
 
   return { created };
 }
@@ -498,6 +533,20 @@ async function handleApiRequest(request, response) {
 
     if (request.method === 'POST' && pathname === '/requisitions') {
       const result = createRequisition(await readBody(request));
+
+      if (result.error) {
+        return badRequest(response, result.error);
+      }
+
+      return sendJson(response, 201, { data: result.created });
+    }
+
+    if (request.method === 'GET' && pathname === '/handovers') {
+      return sendJson(response, 200, { data: handovers });
+    }
+
+    if (request.method === 'POST' && pathname === '/handovers') {
+      const result = createHandover(await readBody(request));
 
       if (result.error) {
         return badRequest(response, result.error);

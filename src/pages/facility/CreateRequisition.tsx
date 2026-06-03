@@ -11,6 +11,8 @@ import {
   ShieldCheck } from
 'lucide-react';
 import { DEVICE_TYPES } from '../../data/mockData';
+import { api } from '../../config/api';
+import { useRole } from '../../context/RoleContext';
 interface RequisitionRow {
   id: string;
   sdpName: string;
@@ -21,6 +23,7 @@ interface RequisitionRow {
 }
 export function CreateRequisition() {
   const navigate = useNavigate();
+  const { currentUser } = useRole();
   const [rows, setRows] = useState<RequisitionRow[]>([
   {
     id: '1',
@@ -31,6 +34,8 @@ export function CreateRequisition() {
     requestedQty: ''
   }]
   );
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const addRow = () => {
     setRows([
     ...rows,
@@ -61,6 +66,45 @@ export function CreateRequisition() {
       )
     );
   };
+  const submitRequisition = async () => {
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const invalidRow = rows.find(
+        (row) =>
+          !row.sdpName ||
+          !row.hrCount ||
+          !row.deviceType ||
+          row.existingQty === '' ||
+          !row.requestedQty
+      );
+
+      if (invalidRow) {
+        throw new Error('Complete every row before submitting.');
+      }
+
+      await Promise.all(
+        rows.map((row) =>
+          api.post('/requisitions', {
+            sdpName: row.sdpName,
+            hrCount: Number(row.hrCount),
+            deviceType: row.deviceType,
+            existingQty: Number(row.existingQty),
+            requestedQty: Number(row.requestedQty),
+            facilityId: currentUser?.facility?.id || null
+          })
+        )
+      );
+
+      navigate('/requisitions');
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to submit requisition.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full">
       {/* Main Form Area */}
@@ -192,16 +236,22 @@ export function CreateRequisition() {
         </div>
 
         <div className="flex justify-end space-x-3">
+          {error ? (
+            <div className="mr-auto rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              {error}
+            </div>
+          ) : null}
           <button className="flex items-center px-4 py-2 border border-neutral-300 bg-white text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors">
             <Save className="w-4 h-4 mr-2" />
             Save as Draft
           </button>
           <button
-            onClick={() => navigate('/requisitions')}
+            onClick={submitRequisition}
+            disabled={isSubmitting}
             className="flex items-center px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm">
             
             <Send className="w-4 h-4 mr-2" />
-            Submit Requisition
+            {isSubmitting ? 'Submitting...' : 'Submit Requisition'}
           </button>
         </div>
       </div>
