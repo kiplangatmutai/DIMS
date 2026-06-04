@@ -243,6 +243,7 @@ export const users = [
     facilityId: null,
     county: null,
     mobileNo: null,
+    createdByUserId: null,
     status: 'Active'
   }
 ];

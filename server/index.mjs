@@ -17,6 +17,7 @@ import {
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || '127.0.0.1';
+const sessions = new Map();
 
 const sendJson = (res, statusCode, payload) => {
   res.writeHead(statusCode, {
@@ -70,6 +71,32 @@ const enrichUser = (user) => ({
   facility: facilities.find((facility) => facility.id === user.facilityId) || null,
   county: user.county || null
 });
+
+const getBearerToken = (req) => {
+  const authorization = req.headers.authorization || '';
+  const [scheme, token] = authorization.split(' ');
+
+  return scheme?.toLowerCase() === 'bearer' ? token : null;
+};
+
+const getCurrentUser = (req) => {
+  const token = getBearerToken(req);
+  const userId = token ? sessions.get(token) : null;
+
+  return userId ? users.find((user) => user.id === userId) || null : null;
+};
+
+const visibleUsersFor = (currentUser) => {
+  if (!currentUser) {
+    return [];
+  }
+
+  if (currentUser.roleId === 'super-admin') {
+    return users;
+  }
+
+  return users.filter((user) => user.createdByUserId === currentUser.id);
+};
 
 const slugify = (value) =>
   String(value)
@@ -185,7 +212,7 @@ const createRole = (body) => {
   return { created };
 };
 
-const createUser = (body) => {
+const createUser = (body, currentUser = null) => {
   const requiredFields = ['name', 'username', 'email', 'mobileNo', 'password', 'roleId'];
   const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
 
@@ -235,6 +262,7 @@ const createUser = (body) => {
     roleId: String(body.roleId),
     facilityId: body.facilityId || null,
     county: body.county || null,
+    createdByUserId: currentUser?.id || null,
     status: 'Active'
   };
 
@@ -547,8 +575,11 @@ const handleRequest = async (req, res) => {
         });
       }
 
+      const token = randomUUID();
+      sessions.set(token, user.id);
+
       return sendJson(res, 200, {
-        token: randomUUID(),
+        token,
         user: enrichUser(user)
       });
     }
@@ -572,11 +603,11 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/users') {
-      return sendJson(res, 200, { data: users.map(enrichUser) });
+      return sendJson(res, 200, { data: visibleUsersFor(getCurrentUser(req)).map(enrichUser) });
     }
 
     if (req.method === 'POST' && pathname === '/users') {
-      const result = createUser(await readBody(req));
+      const result = createUser(await readBody(req), getCurrentUser(req));
 
       if (result.error) {
         return badRequest(res, result.error);
