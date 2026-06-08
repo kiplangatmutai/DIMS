@@ -3,6 +3,7 @@ import { PlusCircle } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
+import { getFacilityScopeId } from '../../utils/facilityScope';
 
 interface Ticket {
   id: string;
@@ -19,7 +20,7 @@ interface DataResponse<T> {
 
 export function FaultyDevices() {
   const { currentUser } = useRole();
-  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
+  const facilityId = getFacilityScopeId(currentUser);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || tickets[0];

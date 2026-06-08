@@ -19,6 +19,10 @@ interface InventoryUploadRow {
   status: string;
   dateReceived: string;
   facilityId: string | null;
+  county: string | null;
+  fid: string | null;
+  facilityName: string | null;
+  kephLevel: string | null;
 }
 
 interface ValidationError {
@@ -37,11 +41,14 @@ interface BulkSaveResponse {
 const headers = [
   'id',
   'deviceType',
-  'imei',
+  'IMEI 1',
   'serial',
   'status',
   'dateReceived',
-  'facilityId'
+  'County',
+  'FID',
+  'Facility Name',
+  'KEPH Level'
 ];
 
 const validDeviceTypes = ['Tablet', 'Desktop', 'Laptop', 'Biometric'];
@@ -138,11 +145,15 @@ export function BulkMigration() {
         rowNumber,
         id: raw.id,
         deviceType: raw.deviceType,
-        imei: raw.imei || null,
+        imei: raw['IMEI 1'] || null,
         serial: raw.serial || null,
         status: raw.status || 'Device Accepted',
         dateReceived: raw.dateReceived || new Date().toISOString().slice(0, 10),
-        facilityId: raw.facilityId || null
+        facilityId: raw.FID || null,
+        county: raw.County || null,
+        fid: raw.FID || null,
+        facilityName: raw['Facility Name'] || null,
+        kephLevel: raw['KEPH Level'] || null
       };
 
       if (!row.id) {

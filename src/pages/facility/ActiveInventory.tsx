@@ -3,6 +3,7 @@ import { Search, Filter, Wrench, ShieldAlert } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
+import { getFacilityScopeId } from '../../utils/facilityScope';
 
 interface InventoryItem {
   id: string;
@@ -20,7 +21,7 @@ interface DataResponse<T> {
 
 export function ActiveInventory() {
   const { currentUser } = useRole();
-  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
+  const facilityId = getFacilityScopeId(currentUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [message, setMessage] = useState('');

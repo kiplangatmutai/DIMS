@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import {
   counties,
   deviceTypes,
@@ -45,6 +46,22 @@ const badRequest = (res, message) =>
     }
   });
 
+const unauthorized = (res) =>
+  sendJson(res, 401, {
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Sign in is required.'
+    }
+  });
+
+const forbidden = (res) =>
+  sendJson(res, 403, {
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Your profile is not allowed to perform this action.'
+    }
+  });
+
 const readBody = async (req) => {
   let raw = '';
 
@@ -86,6 +103,66 @@ const getCurrentUser = (req) => {
   return userId ? users.find((user) => user.id === userId) || null : null;
 };
 
+const getUserRole = (user) => roles.find((candidate) => candidate.id === user?.roleId) || null;
+
+const getUserFacilityScopeId = (user) =>
+  user?.facilityId || (getUserRole(user)?.tier === 'Facility' ? user?.id : null);
+
+const isFacilityScopedUser = (user) => getUserRole(user)?.tier === 'Facility';
+
+const filterRecordsForUser = (user, records) => {
+  if (!isFacilityScopedUser(user)) {
+    return records;
+  }
+
+  const facilityId = getUserFacilityScopeId(user);
+  return facilityId ? records.filter((record) => record.facilityId === facilityId) : [];
+};
+
+const canAccessRecord = (user, record) =>
+  Boolean(record) &&
+  (!isFacilityScopedUser(user) || record.facilityId === getUserFacilityScopeId(user));
+
+const hasRouteAccess = (user, routePaths) => {
+  if (user?.roleId === 'super-admin') {
+    return true;
+  }
+
+  const role = roles.find((candidate) => candidate.id === user?.roleId);
+  const allowedPaths = role?.routes?.map((route) => route.path) || [];
+
+  return routePaths.some((path) => allowedPaths.includes(path));
+};
+
+const requireUser = (res, user) => {
+  if (!user || user.status !== 'Active') {
+    unauthorized(res);
+    return false;
+  }
+
+  return true;
+};
+
+const requireRoute = (res, user, routePaths) => {
+  if (!requireUser(res, user)) {
+    return false;
+  }
+
+  if (!hasRouteAccess(user, routePaths)) {
+    forbidden(res);
+    return false;
+  }
+
+  return true;
+};
+
+const canManageUser = (actor, targetUser) =>
+  actor?.roleId === 'super-admin' || targetUser?.createdByUserId === actor?.id;
+
+const canAssignRole = (actor, roleId) =>
+  actor?.roleId === 'super-admin' ||
+  Boolean(getUserRole(actor)?.canOnboardRoleIds?.includes(roleId));
+
 const visibleUsersFor = (currentUser) => {
   if (!currentUser) {
     return [];
@@ -96,6 +173,20 @@ const visibleUsersFor = (currentUser) => {
   }
 
   return users.filter((user) => user.createdByUserId === currentUser.id);
+};
+
+const visibleRolesFor = (currentUser) => {
+  if (currentUser?.roleId === 'super-admin') {
+    return roles;
+  }
+
+  const currentRole = getUserRole(currentUser);
+  const visibleIds = new Set([
+    currentUser?.roleId,
+    ...(currentRole?.canOnboardRoleIds || [])
+  ]);
+
+  return roles.filter((role) => visibleIds.has(role.id));
 };
 
 const slugify = (value) =>
@@ -147,13 +238,16 @@ const getDashboardSummary = (facilityId = null) => {
 
 const parseApiUrl = (req) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || `${HOST}:${PORT}`}`);
+  const pathname = url.pathname.startsWith('/dha-device-hub/api')
+    ? url.pathname.replace('/dha-device-hub', '')
+    : url.pathname;
 
-  if (!url.pathname.startsWith('/api')) {
+  if (!pathname.startsWith('/api')) {
     return null;
   }
 
   return {
-    pathname: url.pathname.replace(/^\/api/, '') || '/',
+    pathname: pathname.replace(/^\/api/, '') || '/',
     searchParams: url.searchParams
   };
 };
@@ -238,7 +332,11 @@ const createUser = (body, currentUser = null) => {
     return { error: 'Users cannot be onboarded into this profile.' };
   }
 
-  if (body.facilityId && !facilities.some((facility) => facility.id === body.facilityId)) {
+  if (
+    body.facilityId &&
+    facilities.length > 0 &&
+    !facilities.some((facility) => facility.id === body.facilityId)
+  ) {
     return { error: 'Selected facility does not exist.' };
   }
 
@@ -270,27 +368,29 @@ const createUser = (body, currentUser = null) => {
   return { created };
 };
 
-const createRequisition = (body) => {
-  const requiredFields = ['sdpName', 'hrCount', 'deviceType', 'existingQty', 'requestedQty'];
+const createRequisition = (body, currentUser = null) => {
+  const isDraft = body.status === 'Draft';
+  const requiredFields = isDraft ? [] : ['sdpName', 'hrCount', 'deviceType', 'existingQty', 'requestedQty'];
   const missing = requiredFields.filter((field) => body[field] === undefined || body[field] === '');
 
   if (missing.length > 0) {
     return { error: `Missing required field(s): ${missing.join(', ')}` };
   }
 
-  if (!deviceTypes.includes(body.deviceType)) {
+  if (!isDraft && !deviceTypes.includes(body.deviceType)) {
     return { error: `deviceType must be one of ${deviceTypes.join(', ')}.` };
   }
 
   const created = {
     id: `REQ-${new Date().getUTCFullYear()}-${String(requisitions.length + 1).padStart(3, '0')}`,
-    sdpName: String(body.sdpName),
-    hrCount: Number(body.hrCount),
-    deviceType: String(body.deviceType),
-    existingQty: Number(body.existingQty),
-    requestedQty: Number(body.requestedQty),
-    status: body.status === 'Draft' ? 'Draft' : 'Pending Sub-County',
-    facilityId: body.facilityId || null,
+    sdpName: String(body.sdpName || 'Draft requisition'),
+    hrCount: Number(body.hrCount || 0),
+    deviceType: String(body.deviceType || 'Unspecified'),
+    existingQty: Number(body.existingQty || 0),
+    requestedQty: Number(body.requestedQty || 0),
+    status: isDraft ? 'Draft' : 'Pending Sub-County',
+    facilityId: body.facilityId || getUserFacilityScopeId(currentUser),
+    createdByUserId: currentUser?.id || null,
     timestamp: new Date().toISOString()
   };
 
@@ -316,18 +416,29 @@ const createInventoryItem = (body) => {
     return { error: `deviceType must be one of ${deviceTypes.join(', ')}.` };
   }
 
-  if (body.facilityId && !facilities.some((facility) => facility.id === body.facilityId)) {
+  const facilityRef = body.facilityId || body.fid;
+
+  if (
+    facilityRef &&
+    facilities.length > 0 &&
+    !facilities.some((facility) => facility.id === facilityRef)
+  ) {
     return { error: 'Selected facility does not exist.' };
   }
 
   const created = {
     id: body.id || createId('INV', inventory),
     deviceType: String(body.deviceType),
-    imei: body.imei || null,
+    imei: body.imei || body.imei1 || null,
+    imei1: body.imei1 || body.imei || null,
     serial: body.serial || null,
     status: body.status || 'Device Accepted',
     dateReceived: body.dateReceived || new Date().toISOString().slice(0, 10),
-    facilityId: body.facilityId ? String(body.facilityId) : null
+    facilityId: facilityRef ? String(facilityRef) : null,
+    county: body.county || null,
+    fid: body.fid || body.facilityId || null,
+    facilityName: body.facilityName || null,
+    kephLevel: body.kephLevel || null
   };
 
   inventory.unshift(created);
@@ -349,7 +460,9 @@ const validateInventoryItem = (body, rowNumber = null) => {
     return `${prefix}deviceType must be one of ${deviceTypes.join(', ')}.`;
   }
 
-  if (!body.imei && !body.serial) {
+  const imei = body.imei || body.imei1;
+
+  if (!imei && !body.serial) {
     return `${prefix}imei or serial is required.`;
   }
 
@@ -357,8 +470,8 @@ const validateInventoryItem = (body, rowNumber = null) => {
     return `${prefix}duplicate inventory id ${body.id}.`;
   }
 
-  if (body.imei && inventory.some((item) => item.imei === body.imei)) {
-    return `${prefix}duplicate IMEI ${body.imei}.`;
+  if (imei && inventory.some((item) => item.imei === imei)) {
+    return `${prefix}duplicate IMEI ${imei}.`;
   }
 
   if (body.serial && inventory.some((item) => item.serial === body.serial)) {
@@ -381,9 +494,10 @@ const bulkCreateInventory = (body) => {
 
   body.items.forEach((item, index) => {
     const rowNumber = item.rowNumber || index + 2;
+    const imei = item.imei || item.imei1;
     const duplicateInFile =
       seenIds.has(item.id) ||
-      (item.imei && seenImeis.has(item.imei)) ||
+      (imei && seenImeis.has(imei)) ||
       (item.serial && seenSerials.has(item.serial));
     const error = duplicateInFile
       ? `Row ${rowNumber}: duplicate id, IMEI, or serial inside uploaded CSV.`
@@ -396,8 +510,8 @@ const bulkCreateInventory = (body) => {
 
     seenIds.add(item.id);
 
-    if (item.imei) {
-      seenImeis.add(item.imei);
+    if (imei) {
+      seenImeis.add(imei);
     }
 
     if (item.serial) {
@@ -420,6 +534,11 @@ const createMaintenanceTicket = (body) => {
   }
 
   const matchedInventory = findInventoryByIdentifier(body.identifier);
+
+  if (matchedInventory && body.facilityId && matchedInventory.facilityId !== body.facilityId) {
+    return { error: 'The selected device does not belong to this facility.' };
+  }
+
   const facilityId = body.facilityId || matchedInventory?.facilityId || null;
   const created = {
     id: createId('TKT', maintenanceTickets),
@@ -454,6 +573,11 @@ const createStolenReport = (body) => {
   }
 
   const matchedInventory = findInventoryByIdentifier(body.identifier);
+
+  if (matchedInventory && body.facilityId && matchedInventory.facilityId !== body.facilityId) {
+    return { error: 'The selected device does not belong to this facility.' };
+  }
+
   const facilityId = body.facilityId || matchedInventory?.facilityId || null;
   const created = {
     id: createId('INC', stolenReports),
@@ -533,7 +657,7 @@ const createHandover = (body) => {
   return { created };
 };
 
-const handleRequest = async (req, res) => {
+export const handleRequest = async (req, res) => {
   if (req.method === 'OPTIONS') {
     return sendJson(res, 204, {});
   }
@@ -563,7 +687,8 @@ const handleRequest = async (req, res) => {
           [candidate.username, candidate.email]
             .filter(Boolean)
             .some((value) => value.toLowerCase() === identifier) &&
-          candidate.password === body.password
+          candidate.password === body.password &&
+          candidate.status === 'Active'
       );
 
       if (!user) {
@@ -584,11 +709,15 @@ const handleRequest = async (req, res) => {
       });
     }
 
+    const currentUser = getCurrentUser(req);
+
     if (req.method === 'GET' && pathname === '/roles') {
-      return sendJson(res, 200, { data: roles });
+      if (!requireUser(res, currentUser)) return;
+      return sendJson(res, 200, { data: visibleRolesFor(currentUser) });
     }
 
     if (req.method === 'POST' && pathname === '/roles') {
+      if (!requireRoute(res, currentUser, ['/roles'])) return;
       const result = createRole(await readBody(req));
 
       if (result.error) {
@@ -599,15 +728,18 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/modules') {
+      if (!requireRoute(res, currentUser, ['/roles'])) return;
       return sendJson(res, 200, { data: modules });
     }
 
     if (req.method === 'GET' && pathname === '/users') {
-      return sendJson(res, 200, { data: visibleUsersFor(getCurrentUser(req)).map(enrichUser) });
+      if (!requireRoute(res, currentUser, ['/users'])) return;
+      return sendJson(res, 200, { data: visibleUsersFor(currentUser).map(enrichUser) });
     }
 
     if (req.method === 'POST' && pathname === '/users') {
-      const result = createUser(await readBody(req), getCurrentUser(req));
+      if (!requireRoute(res, currentUser, ['/users'])) return;
+      const result = createUser(await readBody(req), currentUser);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -619,10 +751,15 @@ const handleRequest = async (req, res) => {
     const userMatch = pathname.match(/^\/users\/([^/]+)$/);
 
     if (userMatch && req.method === 'PATCH') {
+      if (!requireRoute(res, currentUser, ['/users'])) return;
       const user = users.find((candidate) => candidate.id === userMatch[1]);
 
       if (!user) {
         return notFound(res);
+      }
+
+      if (!canManageUser(currentUser, user)) {
+        return forbidden(res);
       }
 
       const body = await readBody(req);
@@ -633,6 +770,10 @@ const handleRequest = async (req, res) => {
 
       if (body.roleId && !roles.some((role) => role.id === body.roleId)) {
         return badRequest(res, 'Selected role does not exist.');
+      }
+
+      if (body.roleId && !canAssignRole(currentUser, body.roleId)) {
+        return forbidden(res);
       }
 
       if (body.county && !counties.includes(body.county)) {
@@ -659,10 +800,12 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/counties') {
+      if (!requireUser(res, currentUser)) return;
       return sendJson(res, 200, { data: counties });
     }
 
     if (req.method === 'GET' && pathname === '/facilities') {
+      if (!requireUser(res, currentUser)) return;
       const county = searchParams.get('county');
       const data = county
         ? facilities.filter((facility) => facility.county.toLowerCase() === county.toLowerCase())
@@ -672,19 +815,25 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/device-types') {
+      if (!requireUser(res, currentUser)) return;
       return sendJson(res, 200, { data: deviceTypes });
     }
 
     if (req.method === 'GET' && pathname === '/dashboard/summary') {
-      return sendJson(res, 200, { data: getDashboardSummary(searchParams.get('facilityId')) });
+      if (!requireRoute(res, currentUser, ['/dashboard'])) return;
+      const facilityId = isFacilityScopedUser(currentUser)
+        ? getUserFacilityScopeId(currentUser)
+        : searchParams.get('facilityId');
+      return sendJson(res, 200, { data: getDashboardSummary(facilityId) });
     }
 
     if (req.method === 'GET' && pathname === '/inventory') {
+      if (!requireRoute(res, currentUser, ['/inventory'])) return;
       const facilityId = searchParams.get('facilityId');
       const status = searchParams.get('status');
-      let data = inventory;
+      let data = filterRecordsForUser(currentUser, inventory);
 
-      if (facilityId) {
+      if (facilityId && !isFacilityScopedUser(currentUser)) {
         data = data.filter((item) => item.facilityId === facilityId);
       }
 
@@ -696,7 +845,14 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/inventory') {
-      const result = createInventoryItem(await readBody(req));
+      if (!requireRoute(res, currentUser, ['/inventory', '/migration'])) return;
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        body.facilityId = getUserFacilityScopeId(currentUser);
+      }
+
+      const result = createInventoryItem(body);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -706,6 +862,7 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/inventory/bulk') {
+      if (!requireRoute(res, currentUser, ['/migration'])) return;
       const result = bulkCreateInventory(await readBody(req));
 
       if (result.error) {
@@ -725,17 +882,30 @@ const handleRequest = async (req, res) => {
     const inventoryMatch = pathname.match(/^\/inventory\/([^/]+)$/);
 
     if (inventoryMatch && req.method === 'PATCH') {
+      if (!requireRoute(res, currentUser, ['/inventory'])) return;
       const item = inventory.find((candidate) => candidate.id === inventoryMatch[1]);
 
       if (!item) {
         return notFound(res);
       }
 
-      Object.assign(item, await readBody(req));
+      if (!canAccessRecord(currentUser, item)) {
+        return forbidden(res);
+      }
+
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        delete body.facilityId;
+        delete body.fid;
+      }
+
+      Object.assign(item, body);
       return sendJson(res, 200, { data: item });
     }
 
     if (req.method === 'GET' && pathname === '/requisitions') {
+      if (!requireRoute(res, currentUser, ['/requisitions', '/requests'])) return;
       const status = searchParams.get('status');
       const facilityId = searchParams.get('facilityId');
       let data = requisitions;
@@ -745,14 +915,32 @@ const handleRequest = async (req, res) => {
       }
 
       if (facilityId) {
-        data = data.filter((item) => item.facilityId === facilityId);
+        data = data.filter(
+          (item) =>
+            (!isFacilityScopedUser(currentUser) && item.facilityId === facilityId) ||
+            (currentUser && item.createdByUserId === currentUser.id)
+        );
+      } else if (currentUser?.roleId === 'facility-user') {
+        const userFacilityId = getUserFacilityScopeId(currentUser);
+        data = data.filter(
+          (item) =>
+            item.createdByUserId === currentUser.id ||
+            (userFacilityId && item.facilityId === userFacilityId)
+        );
       }
 
       return sendJson(res, 200, { data });
     }
 
     if (req.method === 'POST' && pathname === '/requisitions') {
-      const result = createRequisition(await readBody(req));
+      if (!requireRoute(res, currentUser, ['/requisitions/create'])) return;
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        body.facilityId = getUserFacilityScopeId(currentUser);
+      }
+
+      const result = createRequisition(body, currentUser);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -764,20 +952,30 @@ const handleRequest = async (req, res) => {
     const requisitionMatch = pathname.match(/^\/requisitions\/([^/]+)$/);
 
     if (requisitionMatch && req.method === 'GET') {
+      if (!requireRoute(res, currentUser, ['/requisitions', '/requests'])) return;
       const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
 
       if (!requisition) {
         return notFound(res);
       }
 
+      if (!canAccessRecord(currentUser, requisition)) {
+        return forbidden(res);
+      }
+
       return sendJson(res, 200, { data: requisition });
     }
 
     if (requisitionMatch && req.method === 'PATCH') {
+      if (!requireRoute(res, currentUser, ['/requests'])) return;
       const requisition = requisitions.find((item) => item.id === requisitionMatch[1]);
 
       if (!requisition) {
         return notFound(res);
+      }
+
+      if (!canAccessRecord(currentUser, requisition)) {
+        return forbidden(res);
       }
 
       Object.assign(requisition, await readBody(req));
@@ -785,13 +983,25 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/maintenance-tickets') {
+      if (!requireRoute(res, currentUser, ['/faulty', '/maintenance', '/tickets', '/incidents'])) return;
+      const requestedFacilityId = searchParams.get('facilityId');
+      const data = filterRecordsForUser(currentUser, maintenanceTickets);
       return sendJson(res, 200, {
-        data: filterByFacility(maintenanceTickets, searchParams.get('facilityId'))
+        data: requestedFacilityId && !isFacilityScopedUser(currentUser)
+          ? filterByFacility(data, requestedFacilityId)
+          : data
       });
     }
 
     if (req.method === 'POST' && pathname === '/maintenance-tickets') {
-      const result = createMaintenanceTicket(await readBody(req));
+      if (!requireRoute(res, currentUser, ['/faulty', '/maintenance', '/tickets'])) return;
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        body.facilityId = getUserFacilityScopeId(currentUser);
+      }
+
+      const result = createMaintenanceTicket(body);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -801,13 +1011,25 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/stolen-reports') {
+      if (!requireRoute(res, currentUser, ['/stolen', '/incidents', '/maintenance'])) return;
+      const requestedFacilityId = searchParams.get('facilityId');
+      const data = filterRecordsForUser(currentUser, stolenReports);
       return sendJson(res, 200, {
-        data: filterByFacility(stolenReports, searchParams.get('facilityId'))
+        data: requestedFacilityId && !isFacilityScopedUser(currentUser)
+          ? filterByFacility(data, requestedFacilityId)
+          : data
       });
     }
 
     if (req.method === 'POST' && pathname === '/stolen-reports') {
-      const result = createStolenReport(await readBody(req));
+      if (!requireRoute(res, currentUser, ['/stolen', '/incidents'])) return;
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        body.facilityId = getUserFacilityScopeId(currentUser);
+      }
+
+      const result = createStolenReport(body);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -817,13 +1039,25 @@ const handleRequest = async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/handovers') {
+      if (!requireRoute(res, currentUser, ['/handover'])) return;
+      const requestedFacilityId = searchParams.get('facilityId');
+      const data = filterRecordsForUser(currentUser, handovers);
       return sendJson(res, 200, {
-        data: filterByFacility(handovers, searchParams.get('facilityId'))
+        data: requestedFacilityId && !isFacilityScopedUser(currentUser)
+          ? filterByFacility(data, requestedFacilityId)
+          : data
       });
     }
 
     if (req.method === 'POST' && pathname === '/handovers') {
-      const result = createHandover(await readBody(req));
+      if (!requireRoute(res, currentUser, ['/handover'])) return;
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        body.facilityId = getUserFacilityScopeId(currentUser);
+      }
+
+      const result = createHandover(body);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -835,25 +1069,45 @@ const handleRequest = async (req, res) => {
     const handoverMatch = pathname.match(/^\/handovers\/([^/]+)$/);
 
     if (handoverMatch && req.method === 'PATCH') {
+      if (!requireRoute(res, currentUser, ['/handover'])) return;
       const handover = handovers.find((candidate) => candidate.id === handoverMatch[1]);
 
       if (!handover) {
         return notFound(res);
       }
 
-      Object.assign(handover, await readBody(req));
+      if (!canAccessRecord(currentUser, handover)) {
+        return forbidden(res);
+      }
+
+      const body = await readBody(req);
+
+      if (isFacilityScopedUser(currentUser)) {
+        delete body.facilityId;
+      }
+
+      Object.assign(handover, body);
       handover.status = getHandoverStatus(handover);
       return sendJson(res, 200, { data: handover });
     }
 
     if (req.method === 'GET' && pathname === '/notifications') {
+      if (!requireUser(res, currentUser)) return;
+      const requestedFacilityId = searchParams.get('facilityId');
+      const data = filterRecordsForUser(currentUser, notifications);
       return sendJson(res, 200, {
-        data: filterByFacility(notifications, searchParams.get('facilityId'))
+        data: requestedFacilityId && !isFacilityScopedUser(currentUser)
+          ? filterByFacility(data, requestedFacilityId)
+          : data
       });
     }
 
     return notFound(res);
   } catch (error) {
+    if (error.message === 'Request body must be valid JSON.') {
+      return badRequest(res, error.message);
+    }
+
     return sendJson(res, 500, {
       error: {
         code: 'SERVER_ERROR',
@@ -863,6 +1117,12 @@ const handleRequest = async (req, res) => {
   }
 };
 
-http.createServer(handleRequest).listen(PORT, HOST, () => {
-  console.log(`DIMS API listening at http://${HOST}:${PORT}/api`);
-});
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(process.argv[1]).href
+  : false;
+
+if (isDirectRun) {
+  http.createServer(handleRequest).listen(PORT, HOST, () => {
+    console.log(`DIMS API listening at http://${HOST}:${PORT}/api`);
+  });
+}

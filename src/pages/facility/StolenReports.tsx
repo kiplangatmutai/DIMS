@@ -3,6 +3,7 @@ import { ShieldAlert, PlusCircle, FileText, MapPin } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
+import { getFacilityScopeId } from '../../utils/facilityScope';
 
 interface Incident {
   id: string;
@@ -20,7 +21,7 @@ interface DataResponse<T> {
 
 export function StolenReports() {
   const { currentUser } = useRole();
-  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
+  const facilityId = getFacilityScopeId(currentUser);
   const [activeTab, setActiveTab] = useState<'Stolen' | 'Recovered'>('Stolen');
   const [incidents, setIncidents] = useState<Incident[]>([]);
 

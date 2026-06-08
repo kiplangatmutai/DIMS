@@ -11,6 +11,7 @@ import {
 import { StatusPill } from '../../components/ui/StatusPill';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
+import { getFacilityScopeId } from '../../utils/facilityScope';
 
 interface DataResponse<T> {
   data: T;
@@ -43,7 +44,7 @@ interface InventoryItem {
 export function FacilityDashboard() {
   const navigate = useNavigate();
   const { currentUser } = useRole();
-  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
+  const facilityId = getFacilityScopeId(currentUser);
   const [summary, setSummary] = useState<Summary>({
     activeDevices: 0,
     pendingRequests: 0,

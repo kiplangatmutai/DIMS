@@ -21,19 +21,31 @@ interface DataResponse<T> {
 export function MyRequests() {
   const navigate = useNavigate();
   const { currentUser } = useRole();
-  const facilityId = currentUser?.facility?.id || currentUser?.facilityId;
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
 
   useEffect(() => {
-    if (!facilityId) {
-      setRequisitions([]);
-      return;
-    }
+    api.get<DataResponse<Requisition[]>>('/requisitions')
+      .then(async (response) => {
+        if (response.data.length > 0) {
+          setRequisitions(response.data);
+          return;
+        }
 
-    api.get<DataResponse<Requisition[]>>(`/requisitions?facilityId=${encodeURIComponent(facilityId)}`)
-      .then((response) => setRequisitions(response.data))
+        const facilityId =
+          currentUser?.facility?.id || currentUser?.facilityId || currentUser?.id;
+
+        if (!facilityId) {
+          setRequisitions([]);
+          return;
+        }
+
+        const fallbackResponse = await api.get<DataResponse<Requisition[]>>(
+          `/requisitions?facilityId=${encodeURIComponent(facilityId)}`
+        );
+        setRequisitions(fallbackResponse.data);
+      })
       .catch(() => setRequisitions([]));
-  }, [facilityId]);
+  }, [currentUser?.facility?.id, currentUser?.facilityId, currentUser?.id]);
 
   return (
     <div className="space-y-6">

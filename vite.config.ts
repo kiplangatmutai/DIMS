@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { handleApiRequest } from './server.mjs'
+import { handleRequest } from './server/index.mjs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -17,7 +17,7 @@ export default defineConfig({
             return
           }
 
-          await handleApiRequest(request, response)
+          await handleRequest(request, response)
         })
       },
     },

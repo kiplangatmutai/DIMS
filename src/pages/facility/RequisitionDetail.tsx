@@ -4,6 +4,7 @@ import { ArrowLeft, Building } from 'lucide-react';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { useRole } from '../../context/RoleContext';
 import { api } from '../../config/api';
+import { getFacilityScopeId } from '../../utils/facilityScope';
 
 interface Requisition {
   id: string;
@@ -24,6 +25,7 @@ export function RequisitionDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { currentUser } = useRole();
+  const facilityId = getFacilityScopeId(currentUser);
   const [requisition, setRequisition] = useState<Requisition | null>(null);
   const [error, setError] = useState('');
   const requisitionId = requisition?.id || id || 'New Requisition';
@@ -136,7 +138,7 @@ export function RequisitionDetail() {
           <div>
             <div className="text-accent-600">Facility ID</div>
             <div className="font-medium text-accent-900">
-              {currentUser?.facility?.id || '-'}
+              {facilityId || '-'}
             </div>
           </div>
           <div>

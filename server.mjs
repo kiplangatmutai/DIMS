@@ -3,6 +3,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { handleRequest as handleCurrentApiRequest } from './server/index.mjs';
 import {
   counties,
   deviceTypes,
@@ -604,7 +605,7 @@ function parseApiUrl(request) {
   };
 }
 
-export async function handleApiRequest(request, response) {
+async function handleLegacyApiRequest(request, response) {
   if (request.method === 'OPTIONS') {
     return sendJson(response, 204, {});
   }
@@ -963,7 +964,7 @@ function resolveFilePath(urlPath) {
 function createProductionServer() {
   return createServer(async (request, response) => {
     if (parseApiUrl(request)) {
-      await handleApiRequest(request, response);
+      await handleCurrentApiRequest(request, response);
       return;
     }
 
@@ -986,6 +987,8 @@ function createProductionServer() {
     createReadStream(filePath).pipe(response);
   });
 }
+
+export const handleApiRequest = handleCurrentApiRequest;
 
 function unauthorized(response) {
   return sendJson(response, 401, {

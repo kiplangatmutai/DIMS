@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -10,9 +10,12 @@ import {
   Building,
   ShieldCheck } from
 'lucide-react';
-import { DEVICE_TYPES } from '../../data/referenceData';
 import { api } from '../../config/api';
 import { useRole } from '../../context/RoleContext';
+import { getFacilityScopeId } from '../../utils/facilityScope';
+interface DataResponse<T> {
+  data: T;
+}
 interface RequisitionRow {
   id: string;
   sdpName: string;
@@ -24,6 +27,8 @@ interface RequisitionRow {
 export function CreateRequisition() {
   const navigate = useNavigate();
   const { currentUser } = useRole();
+  const facilityId = getFacilityScopeId(currentUser);
+  const [deviceTypes, setDeviceTypes] = useState<string[]>([]);
   const [rows, setRows] = useState<RequisitionRow[]>([
   {
     id: '1',
@@ -37,6 +42,12 @@ export function CreateRequisition() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<'entry' | 'review'>('entry');
+
+  useEffect(() => {
+    api.get<DataResponse<string[]>>('/device-types')
+      .then((response) => setDeviceTypes(response.data))
+      .catch(() => setDeviceTypes([]));
+  }, []);
   const addRow = () => {
     setRows([
     ...rows,
@@ -55,7 +66,11 @@ export function CreateRequisition() {
       setRows(rows.filter((r) => r.id !== id));
     }
   };
-  const updateRow = (id: string, field: keyof RequisitionRow, value: any) => {
+  const updateRow = (
+    id: string,
+    field: keyof RequisitionRow,
+    value: string | number | ''
+  ) => {
     setRows(
       rows.map((r) =>
       r.id === id ?
@@ -67,7 +82,23 @@ export function CreateRequisition() {
       )
     );
   };
-  const validateRows = () => {
+  const validateRows = (status: 'Draft' | 'Pending Sub-County') => {
+    if (status === 'Draft') {
+      const hasDraftContent = rows.some((row) =>
+        row.sdpName ||
+        row.hrCount !== '' ||
+        row.deviceType ||
+        row.existingQty !== '' ||
+        row.requestedQty !== ''
+      );
+
+      if (!hasDraftContent) {
+        throw new Error('Add at least one field before saving a draft.');
+      }
+
+      return;
+    }
+
     const invalidRow = rows.find(
       (row) =>
         !row.sdpName ||
@@ -83,15 +114,25 @@ export function CreateRequisition() {
   };
 
   const saveRows = async (status: 'Draft' | 'Pending Sub-County') => {
+    const rowsToSave = status === 'Draft'
+      ? rows.filter((row) =>
+          row.sdpName ||
+          row.hrCount !== '' ||
+          row.deviceType ||
+          row.existingQty !== '' ||
+          row.requestedQty !== ''
+        )
+      : rows;
+
     await Promise.all(
-      rows.map((row) =>
+      rowsToSave.map((row) =>
         api.post('/requisitions', {
           sdpName: row.sdpName,
-          hrCount: Number(row.hrCount),
+          hrCount: row.hrCount === '' ? 0 : Number(row.hrCount),
           deviceType: row.deviceType,
-          existingQty: Number(row.existingQty),
-          requestedQty: Number(row.requestedQty),
-          facilityId: currentUser?.facility?.id || currentUser?.facilityId || null,
+          existingQty: row.existingQty === '' ? 0 : Number(row.existingQty),
+          requestedQty: row.requestedQty === '' ? 0 : Number(row.requestedQty),
+          facilityId,
           status
         })
       )
@@ -103,7 +144,7 @@ export function CreateRequisition() {
     setIsSubmitting(true);
 
     try {
-      validateRows();
+      validateRows('Draft');
       await saveRows('Draft');
       navigate('/requisitions');
     } catch (submitError) {
@@ -117,7 +158,7 @@ export function CreateRequisition() {
     setError('');
 
     try {
-      validateRows();
+      validateRows('Pending Sub-County');
       setStep('review');
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : 'Unable to review requisition.');
@@ -129,7 +170,7 @@ export function CreateRequisition() {
     setIsSubmitting(true);
 
     try {
-      validateRows();
+      validateRows('Pending Sub-County');
       await saveRows('Pending Sub-County');
       navigate('/requisitions');
     } catch (submitError) {
@@ -227,7 +268,7 @@ export function CreateRequisition() {
                         <option value="" disabled>
                           Select...
                         </option>
-                        {DEVICE_TYPES.map((t) =>
+                        {deviceTypes.map((t) =>
                       <option key={t} value={t}>
                             {t}
                           </option>
@@ -413,7 +454,7 @@ export function CreateRequisition() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-accent-600">ID:</span>
-              <span className="font-medium">{currentUser?.facility?.id || '-'}</span>
+              <span className="font-medium">{facilityId || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-accent-600">County:</span>
