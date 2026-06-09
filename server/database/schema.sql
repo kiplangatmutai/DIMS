@@ -53,7 +53,7 @@ CREATE TABLE facilities (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   county_id UUID NOT NULL REFERENCES counties(id) ON DELETE RESTRICT,
-  sub_county_id UUID NOT NULL REFERENCES sub_counties(id) ON DELETE RESTRICT,
+  sub_county_id UUID REFERENCES sub_counties(id) ON DELETE RESTRICT,
   facility_type TEXT,
   status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -68,6 +68,8 @@ CREATE TABLE users (
   password_hash TEXT NOT NULL,
   role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
   facility_id TEXT REFERENCES facilities(id) ON DELETE SET NULL,
+  county_id UUID REFERENCES counties(id) ON DELETE RESTRICT,
+  sub_county_id UUID REFERENCES sub_counties(id) ON DELETE RESTRICT,
   status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Suspended', 'Disabled')),
   last_login_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -310,6 +312,8 @@ CREATE INDEX idx_facilities_county_id ON facilities(county_id);
 CREATE INDEX idx_facilities_sub_county_id ON facilities(sub_county_id);
 CREATE INDEX idx_users_role_id ON users(role_id);
 CREATE INDEX idx_users_facility_id ON users(facility_id);
+CREATE INDEX idx_users_county_id ON users(county_id);
+CREATE INDEX idx_users_sub_county_id ON users(sub_county_id);
 CREATE INDEX idx_devices_facility_id ON devices(facility_id);
 CREATE INDEX idx_devices_device_type_id ON devices(device_type_id);
 CREATE INDEX idx_devices_status ON devices(status);

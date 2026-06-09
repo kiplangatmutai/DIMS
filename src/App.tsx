@@ -12,6 +12,7 @@ import { ProofOfDelivery } from './pages/county/ProofOfDelivery';
 import { AssetTransfers } from './pages/county/AssetTransfers';
 import { Reports } from './pages/dha/Reports';
 import { BulkMigration } from './pages/dha/BulkMigration';
+import { FacilityManagement } from './pages/dha/FacilityManagement';
 import { OrderSummary } from './pages/vendor/OrderSummary';
 import { Serialization } from './pages/vendor/Serialization';
 import { Notifications } from './pages/Notifications';
@@ -51,6 +52,7 @@ export function App() {
             <Route path="/users" element={<UsersRouter />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/migration" element={<BulkMigration />} />
+            <Route path="/facilities" element={<FacilityManagement />} />
             <Route path="/orders" element={<OrderSummary />} />
             <Route path="/serialization" element={<Serialization />} />
             <Route path="/notifications" element={<Notifications />} />

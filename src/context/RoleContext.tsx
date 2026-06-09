@@ -9,6 +9,7 @@ export interface AuthUser {
   mobileNo?: string | null;
   facilityId?: string | null;
   county?: string | null;
+  subCounty?: string | null;
   role?: {
     id: string;
     name?: string;

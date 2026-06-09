@@ -133,6 +133,9 @@ export function CreateRequisition() {
           existingQty: row.existingQty === '' ? 0 : Number(row.existingQty),
           requestedQty: row.requestedQty === '' ? 0 : Number(row.requestedQty),
           facilityId,
+          facilityName: currentUser?.facility?.name || currentUser?.name || null,
+          county: currentUser?.county || null,
+          subCounty: currentUser?.subCounty || null,
           status
         })
       )
@@ -458,11 +461,11 @@ export function CreateRequisition() {
             </div>
             <div className="flex justify-between">
               <span className="text-accent-600">County:</span>
-              <span className="font-medium">-</span>
+              <span className="font-medium">{currentUser?.county || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-accent-600">Sub-County:</span>
-              <span className="font-medium">-</span>
+              <span className="font-medium">{currentUser?.subCounty || '-'}</span>
             </div>
           </div>
         </div>

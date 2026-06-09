@@ -25,6 +25,7 @@ interface ApiUser {
   email: string;
   mobileNo?: string;
   county?: string | null;
+  subCounty?: string | null;
   role?: ApiRole;
   facility?: ApiFacility | null;
   status?: string;
@@ -42,7 +43,8 @@ const emptyForm = {
   password: '',
   roleId: 'dha-admin',
   facilityId: '',
-  county: ''
+  county: '',
+  subCounty: ''
 };
 
 export function GlobalUsers() {
@@ -119,6 +121,9 @@ export function GlobalUsers() {
     currentRole.tier === 'County' ||
     (selectedRole && ['County', 'Sub-County', 'Facility'].includes(selectedRole.tier))
   );
+  const isSubCountyRequired = Boolean(
+    selectedRole && ['Sub-County', 'Facility'].includes(selectedRole.tier)
+  );
 
   useEffect(() => {
     if (onboardingRoles.length > 0 && !onboardingRoles.some((role) => role.id === form.roleId)) {
@@ -142,7 +147,8 @@ export function GlobalUsers() {
       await api.post('/users', {
         ...form,
         facilityId: form.facilityId || null,
-        county: form.county || null
+        county: form.county || null,
+        subCounty: form.subCounty.trim() || null
       });
       setForm(emptyForm);
       setMessage('User onboarded successfully.');
@@ -297,6 +303,17 @@ export function GlobalUsers() {
         </div>
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1">
+            Sub-County {isSubCountyRequired ? '' : '(optional)'}
+          </label>
+          <input
+            required={isSubCountyRequired}
+            value={form.subCounty}
+            onChange={(event) => setForm({ ...form, subCounty: event.target.value })}
+            placeholder="Enter sub-county"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:ring-brand-500 focus:border-brand-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
             Facility
           </label>
           <select
@@ -351,7 +368,7 @@ export function GlobalUsers() {
               <tr>
                 <th className="px-6 py-4 font-medium">User Details</th>
                 <th className="px-6 py-4 font-medium">Role</th>
-                <th className="px-6 py-4 font-medium">County</th>
+                <th className="px-6 py-4 font-medium">Approval Area</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Action</th>
               </tr>
@@ -405,6 +422,17 @@ export function GlobalUsers() {
                         </option>
                       )}
                     </select>
+                    <input
+                      value={user.subCounty || ''}
+                      onChange={(event) =>
+                        updateUser(
+                          user.id,
+                          { subCounty: event.target.value.trim() || null },
+                          'Sub-county assignment updated successfully.'
+                        )
+                      }
+                      placeholder="No sub-county"
+                      className="mt-2 w-full min-w-40 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm text-neutral-700 focus:border-brand-500 focus:ring-brand-500" />
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.status === 'Disabled' ? 'bg-neutral-100 text-neutral-600' : 'bg-white text-black'}`}>

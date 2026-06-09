@@ -86,7 +86,8 @@ const enrichUser = (user) => ({
   ...stripPassword(user),
   role: roles.find((role) => role.id === user.roleId) || null,
   facility: facilities.find((facility) => facility.id === user.facilityId) || null,
-  county: user.county || null
+  county: user.county || null,
+  subCounty: user.subCounty || null
 });
 
 const getBearerToken = (req) => {
@@ -110,18 +111,40 @@ const getUserFacilityScopeId = (user) =>
 
 const isFacilityScopedUser = (user) => getUserRole(user)?.tier === 'Facility';
 
-const filterRecordsForUser = (user, records) => {
-  if (!isFacilityScopedUser(user)) {
-    return records;
+const isSubCountyScopedUser = (user) => getUserRole(user)?.tier === 'Sub-County';
+
+const isCountyScopedUser = (user) => getUserRole(user)?.tier === 'County';
+
+const isRecordInApprovalScope = (user, record) => {
+  if (isSubCountyScopedUser(user)) {
+    return Boolean(
+      user?.county &&
+      user?.subCounty &&
+      record?.county === user.county &&
+      record?.subCounty === user.subCounty
+    );
   }
 
-  const facilityId = getUserFacilityScopeId(user);
-  return facilityId ? records.filter((record) => record.facilityId === facilityId) : [];
+  if (isCountyScopedUser(user)) {
+    return Boolean(user?.county && record?.county === user.county);
+  }
+
+  return true;
+};
+
+const filterRecordsForUser = (user, records) => {
+  if (isFacilityScopedUser(user)) {
+    const facilityId = getUserFacilityScopeId(user);
+    return facilityId ? records.filter((record) => record.facilityId === facilityId) : [];
+  }
+
+  return records.filter((record) => isRecordInApprovalScope(user, record));
 };
 
 const canAccessRecord = (user, record) =>
   Boolean(record) &&
-  (!isFacilityScopedUser(user) || record.facilityId === getUserFacilityScopeId(user));
+  (!isFacilityScopedUser(user) || record.facilityId === getUserFacilityScopeId(user)) &&
+  isRecordInApprovalScope(user, record);
 
 const hasRouteAccess = (user, routePaths) => {
   if (user?.roleId === 'super-admin') {
@@ -328,6 +351,10 @@ const createUser = (body, currentUser = null) => {
     return { error: 'Selected role does not exist.' };
   }
 
+  if (currentUser && !canAssignRole(currentUser, body.roleId)) {
+    return { error: 'You cannot onboard users into the selected profile.' };
+  }
+
   if (!getAllowedOnboardingRoleIds().includes(body.roleId)) {
     return { error: 'Users cannot be onboarded into this profile.' };
   }
@@ -345,9 +372,14 @@ const createUser = (body, currentUser = null) => {
   }
 
   const requiresCounty = ['County', 'Sub-County', 'Facility'].includes(selectedRole.tier);
+  const requiresSubCounty = ['Sub-County', 'Facility'].includes(selectedRole.tier);
 
   if (requiresCounty && !body.county) {
     return { error: 'County is required for County, Sub-County, and Facility profiles.' };
+  }
+
+  if (requiresSubCounty && !String(body.subCounty || '').trim()) {
+    return { error: 'Sub-county is required for Sub-County and Facility profiles.' };
   }
 
   const created = {
@@ -360,6 +392,7 @@ const createUser = (body, currentUser = null) => {
     roleId: String(body.roleId),
     facilityId: body.facilityId || null,
     county: body.county || null,
+    subCounty: String(body.subCounty || '').trim() || null,
     createdByUserId: currentUser?.id || null,
     status: 'Active'
   };
@@ -381,6 +414,15 @@ const createRequisition = (body, currentUser = null) => {
     return { error: `deviceType must be one of ${deviceTypes.join(', ')}.` };
   }
 
+  const county = body.county || currentUser?.county || null;
+  const subCounty = body.subCounty || currentUser?.subCounty || null;
+
+  if (!isDraft && (!county || !subCounty)) {
+    return { error: 'The facility user must be mapped to a county and sub-county before submitting.' };
+  }
+
+  const facilityId = body.facilityId || getUserFacilityScopeId(currentUser);
+  const facility = facilities.find((candidate) => candidate.id === facilityId);
   const created = {
     id: `REQ-${new Date().getUTCFullYear()}-${String(requisitions.length + 1).padStart(3, '0')}`,
     sdpName: String(body.sdpName || 'Draft requisition'),
@@ -389,7 +431,10 @@ const createRequisition = (body, currentUser = null) => {
     existingQty: Number(body.existingQty || 0),
     requestedQty: Number(body.requestedQty || 0),
     status: isDraft ? 'Draft' : 'Pending Sub-County',
-    facilityId: body.facilityId || getUserFacilityScopeId(currentUser),
+    facilityId,
+    facilityName: String(body.facilityName || facility?.name || currentUser?.name || body.sdpName || ''),
+    county,
+    subCounty,
     createdByUserId: currentUser?.id || null,
     timestamp: new Date().toISOString()
   };
@@ -405,6 +450,74 @@ const createRequisition = (body, currentUser = null) => {
   });
 
   return { created };
+};
+
+const validateFacility = (body, rowNumber = null, existingIds = new Set()) => {
+  const prefix = rowNumber ? `Row ${rowNumber}: ` : '';
+  const id = String(body.id || body.facilityId || '').trim();
+  const name = String(body.name || body.facilityName || '').trim();
+  const county = String(body.county || '').trim();
+
+  if (!id) return `${prefix}Facility ID is required.`;
+  if (!name) return `${prefix}Facility Name is required.`;
+  if (!county) return `${prefix}County is required.`;
+  if (!counties.includes(county)) return `${prefix}County must match an available onboarding county.`;
+  if (facilities.some((facility) => facility.id.toLowerCase() === id.toLowerCase())) {
+    return `${prefix}Facility ID ${id} already exists.`;
+  }
+  if (existingIds.has(id.toLowerCase())) return `${prefix}Duplicate Facility ID ${id} in upload.`;
+
+  return null;
+};
+
+const createFacility = (body) => {
+  const error = validateFacility(body);
+  if (error) return { error };
+
+  const created = {
+    id: String(body.id || body.facilityId).trim(),
+    name: String(body.name || body.facilityName).trim(),
+    county: String(body.county).trim(),
+    status: 'Active',
+    createdAt: new Date().toISOString()
+  };
+
+  facilities.unshift(created);
+  return { created };
+};
+
+const bulkCreateFacilities = (body) => {
+  if (!Array.isArray(body.items) || body.items.length === 0) {
+    return { error: 'items must be a non-empty array.' };
+  }
+
+  const seenIds = new Set();
+  const saved = [];
+  const errors = [];
+
+  body.items.forEach((item, index) => {
+    const row = Number(item.rowNumber || index + 2);
+    const error = validateFacility(item, row, seenIds);
+
+    if (error) {
+      errors.push({ row, message: error.replace(`Row ${row}: `, '') });
+      return;
+    }
+
+    const id = String(item.id || item.facilityId).trim();
+    seenIds.add(id.toLowerCase());
+    const created = {
+      id,
+      name: String(item.name || item.facilityName).trim(),
+      county: String(item.county).trim(),
+      status: 'Active',
+      createdAt: new Date().toISOString()
+    };
+    facilities.unshift(created);
+    saved.push(created);
+  });
+
+  return { saved, errors };
 };
 
 const createInventoryItem = (body) => {
@@ -739,7 +852,13 @@ export const handleRequest = async (req, res) => {
 
     if (req.method === 'POST' && pathname === '/users') {
       if (!requireRoute(res, currentUser, ['/users'])) return;
-      const result = createUser(await readBody(req), currentUser);
+      const body = await readBody(req);
+
+      if (isCountyScopedUser(currentUser)) {
+        body.county = currentUser.county || null;
+      }
+
+      const result = createUser(body, currentUser);
 
       if (result.error) {
         return badRequest(res, result.error);
@@ -764,6 +883,10 @@ export const handleRequest = async (req, res) => {
 
       const body = await readBody(req);
 
+      if (isCountyScopedUser(currentUser)) {
+        body.county = currentUser.county || null;
+      }
+
       if (body.status && !['Active', 'Suspended', 'Disabled'].includes(body.status)) {
         return badRequest(res, 'Unsupported user status.');
       }
@@ -786,15 +909,24 @@ export const handleRequest = async (req, res) => {
 
       const nextRole = roles.find((role) => role.id === (body.roleId || user.roleId));
       const requiresCounty = nextRole && ['County', 'Sub-County', 'Facility'].includes(nextRole.tier);
+      const requiresSubCounty = nextRole && ['Sub-County', 'Facility'].includes(nextRole.tier);
       const nextCounty = body.county !== undefined ? body.county : user.county;
+      const nextSubCounty = body.subCounty !== undefined ? body.subCounty : user.subCounty;
 
       if (requiresCounty && !nextCounty) {
         return badRequest(res, 'County is required for County, Sub-County, and Facility profiles.');
       }
 
+      if (requiresSubCounty && !String(nextSubCounty || '').trim()) {
+        return badRequest(res, 'Sub-county is required for Sub-County and Facility profiles.');
+      }
+
       Object.assign(user, body, {
         mobileNo: body.mobileNo !== undefined ? String(body.mobileNo) : user.mobileNo,
-        county: body.county !== undefined ? body.county || null : user.county || null
+        county: body.county !== undefined ? body.county || null : user.county || null,
+        subCounty: body.subCounty !== undefined
+          ? String(body.subCounty || '').trim() || null
+          : user.subCounty || null
       });
       return sendJson(res, 200, { data: enrichUser(user) });
     }
@@ -812,6 +944,29 @@ export const handleRequest = async (req, res) => {
         : facilities;
 
       return sendJson(res, 200, { data });
+    }
+
+    if (req.method === 'POST' && pathname === '/facilities') {
+      if (!requireRoute(res, currentUser, ['/facilities'])) return;
+      const result = createFacility(await readBody(req));
+
+      if (result.error) return badRequest(res, result.error);
+      return sendJson(res, 201, { data: result.created });
+    }
+
+    if (req.method === 'POST' && pathname === '/facilities/bulk') {
+      if (!requireRoute(res, currentUser, ['/facilities'])) return;
+      const result = bulkCreateFacilities(await readBody(req));
+
+      if (result.error) return badRequest(res, result.error);
+      return sendJson(res, 201, {
+        data: {
+          saved: result.saved,
+          errors: result.errors,
+          savedCount: result.saved.length,
+          errorCount: result.errors.length
+        }
+      });
     }
 
     if (req.method === 'GET' && pathname === '/device-types') {
@@ -850,6 +1005,8 @@ export const handleRequest = async (req, res) => {
 
       if (isFacilityScopedUser(currentUser)) {
         body.facilityId = getUserFacilityScopeId(currentUser);
+        body.county = currentUser.county || null;
+        body.subCounty = currentUser.subCounty || null;
       }
 
       const result = createInventoryItem(body);
@@ -908,7 +1065,7 @@ export const handleRequest = async (req, res) => {
       if (!requireRoute(res, currentUser, ['/requisitions', '/requests'])) return;
       const status = searchParams.get('status');
       const facilityId = searchParams.get('facilityId');
-      let data = requisitions;
+      let data = filterRecordsForUser(currentUser, requisitions);
 
       if (status) {
         data = data.filter((item) => item.status.toLowerCase() === status.toLowerCase());
@@ -938,6 +1095,8 @@ export const handleRequest = async (req, res) => {
 
       if (isFacilityScopedUser(currentUser)) {
         body.facilityId = getUserFacilityScopeId(currentUser);
+        body.county = currentUser.county || null;
+        body.subCounty = currentUser.subCounty || null;
       }
 
       const result = createRequisition(body, currentUser);
@@ -978,7 +1137,16 @@ export const handleRequest = async (req, res) => {
         return forbidden(res);
       }
 
-      Object.assign(requisition, await readBody(req));
+      const body = await readBody(req);
+
+      if (isSubCountyScopedUser(currentUser) || isCountyScopedUser(currentUser)) {
+        delete body.facilityId;
+        delete body.county;
+        delete body.subCounty;
+        delete body.createdByUserId;
+      }
+
+      Object.assign(requisition, body);
       return sendJson(res, 200, { data: requisition });
     }
 

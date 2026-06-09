@@ -27,6 +27,7 @@ export const MODULES: RouteDef[] = [
   { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
   { path: '/users', label: 'User Onboarding', icon: 'Users' },
   { path: '/roles', label: 'Profile Management', icon: 'Shield' },
+  { path: '/facilities', label: 'Facility Management', icon: 'Hospital' },
   { path: '/migration', label: 'Bulk Migration', icon: 'Database' },
   { path: '/requests', label: 'Requests Queue', icon: 'Inbox' },
   { path: '/inventory', label: 'Inventory', icon: 'Boxes' },
@@ -121,7 +122,7 @@ export const ROLES: Role[] = [
     name: 'DHA Admin',
     tier: 'DHA',
     description: 'Provisions internal DHA operational roles and executes verified bulk legacy data migrations.',
-    routes: routesFor(['/dashboard', '/users', '/migration', '/roles']),
+    routes: routesFor(['/dashboard', '/users', '/facilities', '/migration', '/roles']),
     canOnboardRoleIds: [
       'dha-onboarding-officer',
       'dha-approval-officer',
