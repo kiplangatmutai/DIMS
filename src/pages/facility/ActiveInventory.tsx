@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Search, Filter, Wrench, ShieldAlert } from 'lucide-react';
 import { MOCK_INVENTORY } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
 export function ActiveInventory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const filteredInventory = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return MOCK_INVENTORY;
+    }
+
+    return MOCK_INVENTORY.filter((item) =>
+      [item.deviceType, item.imei, item.serial, item.status]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term))
+    );
+  }, [searchTerm]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,7 +62,7 @@ export function ActiveInventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {MOCK_INVENTORY.map((inv) =>
+              {filteredInventory.map((inv) =>
               <tr
                 key={inv.id}
                 className="hover:bg-neutral-50 transition-colors group">
@@ -69,16 +83,16 @@ export function ActiveInventory() {
                     {inv.dateReceived}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end space-x-3 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity">
                       <button
-                      className="text-amber-600 hover:text-amber-800 font-medium text-xs flex items-center bg-amber-50 px-2 py-1 rounded"
+                      className="text-amber-600 hover:text-amber-800 disabled:text-neutral-400 disabled:bg-neutral-100 font-medium text-xs flex items-center bg-amber-50 px-2 py-1 rounded"
                       disabled={inv.status !== 'Device Accepted'}>
                       
                         <Wrench className="w-3 h-3 mr-1" />
                         Report Faulty
                       </button>
                       <button
-                      className="text-brand-600 hover:text-brand-800 font-medium text-xs flex items-center bg-brand-50 px-2 py-1 rounded"
+                      className="text-brand-600 hover:text-brand-800 disabled:text-neutral-400 disabled:bg-neutral-100 font-medium text-xs flex items-center bg-brand-50 px-2 py-1 rounded"
                       disabled={inv.status !== 'Device Accepted'}>
                       
                         <ShieldAlert className="w-3 h-3 mr-1" />
@@ -88,10 +102,10 @@ export function ActiveInventory() {
                   </td>
                 </tr>
               )}
-              {MOCK_INVENTORY.length === 0 ?
+              {filteredInventory.length === 0 ?
               <tr>
                   <td colSpan={6} className="px-6 py-10 text-center text-neutral-500">
-                    No inventory records yet.
+                    {searchTerm ? 'No inventory records match your search.' : 'No inventory records yet.'}
                   </td>
                 </tr> :
               null}

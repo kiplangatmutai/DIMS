@@ -1,4 +1,5 @@
 import React from 'react';
+import { Construction } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { FacilityDashboard } from '../../pages/facility/Dashboard';
 import { SubCountyDashboard } from '../../pages/subcounty/Dashboard';
@@ -14,7 +15,7 @@ import { DHACountyRequestsQueue } from '../../pages/dha/CountyRequestsQueue';
 import { GlobalUsers } from '../../pages/admin/GlobalUsers';
 const ComingSoon = () =>
 <div className="flex flex-col items-center justify-center h-full py-20 text-neutral-500">
-    <div className="text-6xl mb-4">🚧</div>
+    <Construction className="h-12 w-12 mb-4 text-neutral-400" />
     <h2 className="text-xl font-semibold text-neutral-700 mb-2">
       Page Under Construction
     </h2>

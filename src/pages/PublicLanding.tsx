@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Activity,
   Map as MapIcon,
   Shield,
   ActivitySquare,
@@ -313,7 +312,7 @@ export function PublicLanding() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center space-x-2 mb-4 md:mb-0">
             <Shield className="w-4 h-4" />
-            <span>Digital Health Agency © 2026</span>
+            <span>Digital Health Agency &copy; 2026</span>
           </div>
           <div className="space-x-6">
             <a href="#" className="hover:text-brand-600 transition-colors">

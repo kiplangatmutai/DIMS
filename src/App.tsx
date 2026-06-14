@@ -4,16 +4,11 @@ import { RoleProvider } from './context/RoleContext';
 import { PublicLanding } from './pages/PublicLanding';
 import { Login } from './pages/Login';
 import { AppShell } from './pages/AppShell';
-import { FacilityDashboard } from './pages/facility/Dashboard';
 import { CreateRequisition } from './pages/facility/CreateRequisition';
 import { MyRequests } from './pages/facility/MyRequests';
-import { ActiveInventory } from './pages/facility/ActiveInventory';
 import { FaultyDevices } from './pages/facility/FaultyDevices';
 import { StolenReports } from './pages/facility/StolenReports';
 import { Handover } from './pages/facility/Handover';
-import { SubCountyDashboard } from './pages/subcounty/Dashboard';
-import { FacilityRequests } from './pages/subcounty/FacilityRequests';
-import { SubCountyInventory } from './pages/subcounty/SubCountyInventory';
 import { ProofOfDelivery } from './pages/county/ProofOfDelivery';
 import { AssetTransfers } from './pages/county/AssetTransfers';
 import { Reports } from './pages/dha/Reports';
@@ -33,17 +28,6 @@ import {
   RequestsRouter,
   UsersRouter } from
 './components/shell/RoleBasedRouter';
-// Placeholder for unbuilt pages
-const ComingSoon = () =>
-<div className="flex flex-col items-center justify-center h-full py-20 text-neutral-500">
-    <div className="text-6xl mb-4">🚧</div>
-    <h2 className="text-xl font-semibold text-neutral-700 mb-2">
-      Page Under Construction
-    </h2>
-    <p>
-      This view is part of the prototype but hasn't been fully implemented yet.
-    </p>
-  </div>;
 
 export function App() {
   return (

@@ -5,7 +5,8 @@ import {
   Wrench,
   ShieldAlert,
   PlusCircle,
-  ArrowRight } from
+  ArrowRight,
+  MonitorCheck } from
 'lucide-react';
 import { MOCK_INVENTORY, MOCK_REQUISITIONS } from '../../data/mockData';
 import { StatusPill } from '../../components/ui/StatusPill';
@@ -40,7 +41,7 @@ export function FacilityDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
           <div className="flex items-center text-neutral-500 mb-2">
-            <div className="w-5 h-5 mr-2 text-brand-500" />
+            <MonitorCheck className="w-5 h-5 mr-2 text-brand-500" />
             <span className="text-sm font-medium">Active Devices</span>
           </div>
           <div className="text-3xl font-bold text-neutral-900">{activeDevices}</div>
@@ -97,7 +98,7 @@ export function FacilityDashboard() {
                 </div>
                 <div className="text-sm text-neutral-500 flex justify-between">
                   <span>
-                    {req.deviceType} • Qty: {req.requestedQty}
+                    {req.deviceType} &bull; Qty: {req.requestedQty}
                   </span>
                   <span>{req.timestamp.split(' ')[0]}</span>
                 </div>
